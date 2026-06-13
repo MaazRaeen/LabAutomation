@@ -14,11 +14,15 @@ import PlaceholderView from './pages/PlaceholderView'
 import StudentDashboard from './pages/student/Dashboard'
 import StudentExperiments from './pages/student/Experiments'
 import StudentSubmitCode from './pages/student/SubmitCode'
+import StudentLabRecords from './pages/student/LabRecords'
+import StudentResubmissionRequest from './pages/student/ResubmissionRequest'
 
 // Teacher Portal Pages
 import TeacherDashboard from './pages/teacher/Dashboard'
 import TeacherExperiments from './pages/teacher/Experiments'
 import TeacherSubmissions from './pages/teacher/Submissions'
+import TeacherLabVerification from './pages/teacher/LabVerification'
+import TeacherResubmissions from './pages/teacher/Resubmissions'
 
 // Layouts
 import StudentLayout from './layouts/StudentLayout'
@@ -91,7 +95,8 @@ function App() {
             <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="experiments" element={<StudentExperiments />} />
             <Route path="submit" element={<StudentSubmitCode />} />
-            <Route path="records" element={<PlaceholderView title="Lab Records" />} />
+            <Route path="records" element={<StudentLabRecords />} />
+            <Route path="resubmissions" element={<StudentResubmissionRequest />} />
             <Route path="progress" element={<PlaceholderView title="My Progress" />} />
             <Route path="notifications" element={<PlaceholderView title="Notifications" />} />
           </Route>
@@ -104,9 +109,9 @@ function App() {
             <Route path="dashboard" element={<TeacherDashboard />} />
             <Route path="experiments" element={<TeacherExperiments />} />
             <Route path="submissions" element={<TeacherSubmissions />} />
-            <Route path="verification" element={<PlaceholderView title="Lab Verification" />} />
+            <Route path="verification" element={<TeacherLabVerification />} />
             <Route path="evaluations" element={<PlaceholderView title="Evaluations" />} />
-            <Route path="resubmissions" element={<PlaceholderView title="Resubmissions" />} />
+            <Route path="resubmissions" element={<TeacherResubmissions />} />
             <Route path="revisions" element={<PlaceholderView title="Marks Revision" />} />
           </Route>
         </Route>
