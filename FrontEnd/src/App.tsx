@@ -15,6 +15,11 @@ import StudentDashboard from './pages/student/Dashboard'
 import StudentExperiments from './pages/student/Experiments'
 import StudentSubmitCode from './pages/student/SubmitCode'
 
+// Teacher Portal Pages
+import TeacherDashboard from './pages/teacher/Dashboard'
+import TeacherExperiments from './pages/teacher/Experiments'
+import TeacherSubmissions from './pages/teacher/Submissions'
+
 // Layouts
 import StudentLayout from './layouts/StudentLayout'
 import TeacherLayout from './layouts/TeacherLayout'
@@ -96,9 +101,9 @@ function App() {
         <Route path="/teacher" element={<ProtectedRoute roles={['teacher']} />}>
           <Route element={<TeacherLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<PlaceholderView title="Teacher Dashboard" />} />
-            <Route path="experiments" element={<PlaceholderView title="Experiments" />} />
-            <Route path="submissions" element={<PlaceholderView title="Submissions" />} />
+            <Route path="dashboard" element={<TeacherDashboard />} />
+            <Route path="experiments" element={<TeacherExperiments />} />
+            <Route path="submissions" element={<TeacherSubmissions />} />
             <Route path="verification" element={<PlaceholderView title="Lab Verification" />} />
             <Route path="evaluations" element={<PlaceholderView title="Evaluations" />} />
             <Route path="resubmissions" element={<PlaceholderView title="Resubmissions" />} />

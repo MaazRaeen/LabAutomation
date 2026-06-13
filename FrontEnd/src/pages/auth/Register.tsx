@@ -11,6 +11,9 @@ export const Register: React.FC = () => {
   const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student')
   const [enrollmentNo, setEnrollmentNo] = useState('')
   const [department, setDepartment] = useState('')
+  const [semester, setSemester] = useState('')
+  const [session, setSession] = useState('')
+  const [section, setSection] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
@@ -18,7 +21,7 @@ export const Register: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!fullName || !email || !password || !department || (role === 'student' && !enrollmentNo)) {
+    if (!fullName || !email || !password || !department || (role === 'student' && (!enrollmentNo || !semester || !session || !section))) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -35,6 +38,9 @@ export const Register: React.FC = () => {
             role,
             department,
             enrollment_no: role === 'student' ? enrollmentNo : null,
+            semester: role === 'student' ? semester : null,
+            session: role === 'student' ? session : null,
+            section: role === 'student' ? section : null,
           },
         },
       })
@@ -53,6 +59,9 @@ export const Register: React.FC = () => {
               role,
               department,
               enrollment_no: role === 'student' ? enrollmentNo : null,
+              semester: role === 'student' ? semester : null,
+              session: role === 'student' ? session : null,
+              section: role === 'student' ? section : null,
             })
           if (profileError) {
             console.warn('Profile upsert via client failed, relying on trigger:', profileError)
@@ -191,23 +200,80 @@ export const Register: React.FC = () => {
           </div>
 
           {role === 'student' && (
-            <div className="animate-fadeIn">
-              <label className="block text-slate-300 text-sm font-medium mb-1.5" htmlFor="enrollmentNo">
-                Enrollment Number
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Hash className="h-5 w-5" />
+            <div className="animate-fadeIn space-y-4">
+              <div>
+                <label className="block text-slate-300 text-sm font-medium mb-1.5" htmlFor="enrollmentNo">
+                  Enrollment Number
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Hash className="h-5 w-5" />
+                  </div>
+                  <input
+                    id="enrollmentNo"
+                    type="text"
+                    required={role === 'student'}
+                    value={enrollmentNo}
+                    onChange={(e) => setEnrollmentNo(e.target.value)}
+                    placeholder="e.g. 0101CS211050"
+                    className="w-full pl-10 pr-4 py-2 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white placeholder-slate-500 text-sm transition"
+                  />
                 </div>
-                <input
-                  id="enrollmentNo"
-                  type="text"
-                  required={role === 'student'}
-                  value={enrollmentNo}
-                  onChange={(e) => setEnrollmentNo(e.target.value)}
-                  placeholder="e.g. 0101CS211050"
-                  className="w-full pl-10 pr-4 py-2 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white placeholder-slate-500 text-sm transition"
-                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-300 text-xs font-semibold mb-1" htmlFor="semester">
+                    Semester
+                  </label>
+                  <select
+                    id="semester"
+                    required={role === 'student'}
+                    value={semester}
+                    onChange={(e) => setSemester(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white text-xs transition cursor-pointer"
+                  >
+                    <option value="" disabled>Select...</option>
+                    <option value="1st">1st</option>
+                    <option value="2nd">2nd</option>
+                    <option value="3rd">3rd</option>
+                    <option value="4th">4th</option>
+                    <option value="5th">5th</option>
+                    <option value="6th">6th</option>
+                    <option value="7th">7th</option>
+                    <option value="8th">8th</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 text-xs font-semibold mb-1" htmlFor="session">
+                    Session
+                  </label>
+                  <input
+                    id="session"
+                    type="text"
+                    required={role === 'student'}
+                    value={session}
+                    onChange={(e) => setSession(e.target.value)}
+                    placeholder="e.g. 2023-27"
+                    className="w-full px-2.5 py-2 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white placeholder-slate-500 text-xs transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 text-xs font-semibold mb-1" htmlFor="section">
+                    Section
+                  </label>
+                  <input
+                    id="section"
+                    type="text"
+                    required={role === 'student'}
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    placeholder="e.g. CS J"
+                    className="w-full px-2.5 py-2 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white placeholder-slate-500 text-xs transition"
+                  />
+                </div>
               </div>
             </div>
           )}
