@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiPut } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { Loader2, CheckCircle2, XCircle, AlertCircle, X, Calendar } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { createNotification, logAudit } from '../../lib/dbUtils'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface RevisionRequest {
@@ -128,50 +128,15 @@ export const MarksRevision: React.FC = () => {
     try {
       const targetStatus = actionType === 'approve' ? 'approved' : 'rejected'
 
-      // 1. If approved, update the corresponding evaluations table first
-      if (targetStatus === 'approved') {
-        const { error: evalUpdateError } = await supabase
-          .from('evaluations')
-          .update({
-            marks: selectedRequest.requested_marks,
-            evaluated_at: new Date().toISOString()
-          })
-          .eq('id', selectedRequest.evaluation_id)
-
-        if (evalUpdateError) {
-          throw new Error(`Failed to update evaluation marks: ${evalUpdateError.message}. Ensure database policies allow this.`)
-        }
-      }
-
-      // 2. Update the marks revision request status
-      const { error: requestUpdateError } = await supabase
-        .from('marks_revision_requests')
-        .update({
-          status: targetStatus,
-          admin_note: note.trim() || null
-        })
-        .eq('id', selectedRequest.id)
-
-      if (requestUpdateError) throw requestUpdateError
-
-      // 3. Create notification for teacher
-      const notificationMsg = `The marks revision request for student "${selectedRequest.student?.full_name}" in experiment "${selectedRequest.experiment?.title || 'Experiment'}" has been ${targetStatus}.`
-      await createNotification(selectedRequest.teacher.id, notificationMsg)
-
-      // 4. Log audit event
-      await logAudit(
-        user.id,
-        `resolve_revision_${targetStatus}`,
-        'marks_revision_requests',
-        selectedRequest.id,
-        {
-          teacher_id: selectedRequest.teacher.id,
-          evaluation_id: selectedRequest.evaluation_id,
-          original_marks: selectedRequest.original_marks,
-          requested_marks: selectedRequest.requested_marks,
-          status: targetStatus
-        }
-      )
+      // PUT /api/marks-revisions/:id/review — backend handles:
+      //   - evaluation marks update (if approved)
+      //   - revision request status + admin_note update
+      //   - teacher notification
+      //   - audit log
+      await apiPut(`/api/marks-revisions/${selectedRequest.id}/review`, {
+        status: targetStatus,
+        admin_note: note.trim() || null,
+      })
 
       toast.success(`Marks revision request successfully ${targetStatus}!`)
       setModalOpen(false)

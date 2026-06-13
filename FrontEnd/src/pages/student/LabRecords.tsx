@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiPostFormData } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { FileText, Loader2, Upload, AlertCircle, ExternalLink, CheckCircle2, Clock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -154,49 +155,18 @@ export const LabRecords: React.FC = () => {
 
     setSubmitting(true)
     try {
-      const fileExt = file.name.split('.').pop()
-      const allowedExts = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg']
-      if (!fileExt || !allowedExts.includes(fileExt.toLowerCase())) {
-        throw new Error('Invalid file type. Supported types: PDF, DOCX, PNG, JPG, JPEG')
-      }
+      // Send file + experiment_id to the backend as multipart form data.
+      // The backend handles storage upload, DB insert, audit logging, and notifications.
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('experiment_id', experimentId)
 
-      const filePath = `${user.id}/${experimentId}_${Date.now()}.${fileExt}`
-
-      // Upload file to Supabase Storage bucket 'lab-records'
-      const { error: uploadError } = await supabase.storage
-        .from('lab-records')
-        .upload(filePath, file)
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}. Ensure the 'lab-records' storage bucket is created.`)
-      }
-
-      // Retrieve public URL
-      const { data: urlData } = supabase.storage
-        .from('lab-records')
-        .getPublicUrl(filePath)
-      const publicUrl = urlData?.publicUrl
-
-      if (!publicUrl) {
-        throw new Error('Could not retrieve public URL for uploaded file.')
-      }
-
-      // Create lab record database entry
-      const { error: dbError } = await supabase
-        .from('lab_records')
-        .insert({
-          student_id: user.id,
-          experiment_id: experimentId,
-          file_url: publicUrl,
-          status: 'submitted',
-        })
-
-      if (dbError) throw dbError
+      await apiPostFormData('/api/lab-records', formData)
 
       toast.success('Lab record uploaded successfully!')
       setFile(null)
       setExperimentId('')
-      
+
       // Refresh records list
       fetchRecordsAndAssignments()
     } catch (err: any) {

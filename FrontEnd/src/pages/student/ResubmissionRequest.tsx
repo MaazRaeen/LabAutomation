@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiPost } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { RefreshCw, Loader2, Clock, CheckCircle2, XCircle, AlertCircle, Send } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -123,22 +124,16 @@ export const ResubmissionRequest: React.FC = () => {
 
     setSubmitting(true)
     try {
-      // Insert request
-      const { error } = await supabase
-        .from('resubmission_requests')
-        .insert({
-          student_id: user.id,
-          experiment_id: experimentId,
-          justification: justification.trim(),
-          status: 'pending'
-        })
-
-      if (error) throw error
+      // POST to backend — it validates duplicates, notifies teacher, logs audit
+      await apiPost('/api/resubmissions', {
+        experiment_id: experimentId,
+        justification: justification.trim(),
+      })
 
       toast.success('Resubmission request submitted successfully!')
       setJustification('')
       setExperimentId('')
-      
+
       // Refresh requests list
       fetchRequestsAndAssignments()
     } catch (err: any) {

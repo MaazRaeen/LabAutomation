@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { apiPostFormData } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { FileCode, Loader2, Upload, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -28,7 +29,7 @@ export const SubmitCode: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [assignments, setAssignments] = useState<Assignment[]>([])
-  
+
   const [experimentId, setExperimentId] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [language, setLanguage] = useState('')
@@ -64,7 +65,6 @@ export const SubmitCode: React.FC = () => {
 
           setAssignments(formatted)
 
-          // Pre-select experiment from search params or select the first pending/late one
           if (queryExperimentId) {
             setExperimentId(queryExperimentId)
           } else {
@@ -148,85 +148,18 @@ export const SubmitCode: React.FC = () => {
       toast.error('Please select or upload a code file')
       return
     }
-    if (!language) {
-      toast.error('Could not detect file type. Please upload a valid file.')
-      return
-    }
 
     setSubmitting(true)
     try {
-      const activeAssignment = assignments.find(a => a.experiments?.id === experimentId)
-      if (!activeAssignment || !activeAssignment.experiments) {
-        throw new Error('Experiment assignment not found.')
-      }
+      // Build multipart FormData — the backend handles storage upload + DB insert + audit
+      const formData = new FormData()
+      formData.append('code_file', file)
+      formData.append('experiment_id', experimentId)
 
-      const experiment = activeAssignment.experiments
-      const isLate = new Date() > new Date(experiment.deadline)
-
-      // 1. Upload to Supabase Storage bucket 'submissions'
-      const fileExt = file.name.split('.').pop()
-      const filePath = `${user.id}/${experimentId}_${Date.now()}.${fileExt}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('submissions')
-        .upload(filePath, file)
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}. Ensure 'submissions' bucket is created in Supabase.`)
-      }
-
-      // Retrieve public URL
-      const { data: urlData } = supabase.storage
-        .from('submissions')
-        .getPublicUrl(filePath)
-      const publicUrl = urlData?.publicUrl
-
-      if (!publicUrl) {
-        throw new Error('Could not retrieve public URL for uploaded submission.')
-      }
-
-      // 2. Fetch maximum current version to calculate next version increment
-      const { data: existingSubmissions, error: versionError } = await supabase
-        .from('code_submissions')
-        .select('version')
-        .eq('experiment_id', experimentId)
-        .eq('student_id', user.id)
-        .order('version', { ascending: false })
-        .limit(1)
-
-      if (versionError) throw versionError
-
-      const nextVersion = existingSubmissions && existingSubmissions.length > 0
-        ? existingSubmissions[0].version + 1
-        : 1
-
-      // 3. Create code submission DB row
-      const { error: dbError } = await supabase
-        .from('code_submissions')
-        .insert({
-          experiment_id: experimentId,
-          student_id: user.id,
-          file_url: publicUrl,
-          language: language,
-          is_late: isLate,
-          version: nextVersion,
-        })
-
-      if (dbError) throw dbError
-
-      // 4. Update the assignment status
-      const { error: updateError } = await supabase
-        .from('experiment_assignments')
-        .update({
-          status: isLate ? 'late' : 'submitted',
-        })
-        .eq('experiment_id', experimentId)
-        .eq('student_id', user.id)
-
-      if (updateError) throw updateError
+      const result = await apiPostFormData('/api/submissions', formData)
 
       const timestamp = new Date().toLocaleString()
-      toast.success(`Work submitted successfully (v${nextVersion}) at ${timestamp}`)
+      toast.success(`Work submitted successfully (v${result.submission?.version ?? 1}) at ${timestamp}`)
       navigate('/student/experiments')
     } catch (err: any) {
       toast.error(err.message || 'Submission failed')
@@ -334,7 +267,7 @@ export const SubmitCode: React.FC = () => {
             </div>
           )}
 
-          {/* Warning check */}
+          {/* Warning check for late submission */}
           {experimentId && assignments.find(a => a.experiments?.id === experimentId)?.status === 'late' && (
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex items-start gap-3 text-rose-400 text-xs">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />

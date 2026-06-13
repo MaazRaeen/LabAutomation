@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiPut } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { RefreshCw, Loader2, Search, Filter, AlertCircle, CheckCircle2, XCircle, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { createNotification, logAudit } from '../../lib/dbUtils'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface ResubmissionRequest {
@@ -117,47 +117,16 @@ export const Resubmissions: React.FC = () => {
     setSavingAction(true)
     try {
       const newStatus = actionType === 'approve' ? 'approved' : 'rejected'
-      
-      // 1. Update the resubmission request status & notes
-      const { error: reqError } = await supabase
-        .from('resubmission_requests')
-        .update({
-          status: newStatus,
-          teacher_note: note.trim() || null
-        })
-        .eq('id', selectedRequest.id)
 
-      if (reqError) throw reqError
-
-      // 2. If approved, reset the student assignment back to 'pending' so they can submit code or files
-      if (newStatus === 'approved') {
-        const { error: assignError } = await supabase
-          .from('experiment_assignments')
-          .update({ status: 'pending' })
-          .eq('experiment_id', selectedRequest.experiment_id)
-          .eq('student_id', selectedRequest.student_id)
-
-        if (assignError) {
-          console.error('Error resetting assignment status on approval (RLS policy check):', assignError)
-        }
-      }
-
-      // 3. Create notification for student
-      const notificationMessage = `Your resubmission request for experiment "${selectedRequest.experiment?.title || 'Experiment'}" has been ${newStatus}.`
-      await createNotification(selectedRequest.student_id, notificationMessage)
-
-      // 4. Log audit event
-      await logAudit(
-        user.id,
-        `review_resubmission_${newStatus}`,
-        'resubmission_requests',
-        selectedRequest.id,
-        {
-          student_id: selectedRequest.student_id,
-          experiment_id: selectedRequest.experiment_id,
-          status: newStatus
-        }
-      )
+      // PUT /api/resubmissions/:id/review — backend handles:
+      //   - status update + teacher_note
+      //   - assignment reset to 'pending' if approved
+      //   - student notification
+      //   - audit log
+      await apiPut(`/api/resubmissions/${selectedRequest.id}/review`, {
+        status: newStatus,
+        teacher_note: note.trim() || null,
+      })
 
       toast.success(`Request successfully ${newStatus}!`)
       setModalOpen(false)

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { apiPost, apiPut } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { Search, HelpCircle, Loader2, Eye, Award, CheckCircle2, ChevronRight, X, FileCode, CheckSquare, Filter, RefreshCw } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { createNotification, logAudit } from '../../lib/dbUtils'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Evaluation {
@@ -199,68 +199,22 @@ export const Submissions: React.FC = () => {
       const existingEval = selectedSubmission.evaluations && selectedSubmission.evaluations.length > 0
         ? selectedSubmission.evaluations[0]
         : null
-      let evaluationId = ''
 
       if (existingEval) {
-        // Update
-        const { data, error: evalError } = await supabase
-          .from('evaluations')
-          .update({
-            marks: parsedMarks,
-            remarks: remarks.trim(),
-            evaluated_at: new Date().toISOString()
-          })
-          .eq('id', existingEval.id)
-          .select('id')
-          .single()
-
-        if (evalError) throw evalError
-        evaluationId = data?.id || existingEval.id
-      } else {
-        // Insert
-        const { data, error: evalError } = await supabase
-          .from('evaluations')
-          .insert({
-            submission_id: selectedSubmission.id,
-            teacher_id: user.id,
-            marks: parsedMarks,
-            max_marks: 10,
-            remarks: remarks.trim()
-          })
-          .select('id')
-          .single()
-
-        if (evalError) throw evalError
-        evaluationId = data?.id || ''
-      }
-
-      // Update experiment assignment to verified
-      const { error: assignError } = await supabase
-        .from('experiment_assignments')
-        .update({ status: 'verified' })
-        .eq('experiment_id', selectedSubmission.experiment_id)
-        .eq('student_id', selectedSubmission.student_id)
-
-      if (assignError) {
-        console.error('Error updating assignment status:', assignError)
-      }
-
-      // 1. Create notification for student
-      const notificationMessage = `Your code submission for experiment "${selectedSubmission.experiment?.title || 'Experiment'}" has been graded: ${parsedMarks}/10.`
-      await createNotification(selectedSubmission.student_id, notificationMessage)
-
-      // 2. Log audit event
-      await logAudit(
-        user.id,
-        existingEval ? 'update_evaluation' : 'create_evaluation',
-        'evaluations',
-        evaluationId,
-        {
-          submission_id: selectedSubmission.id,
-          student_id: selectedSubmission.student_id,
+        // Update via backend — handles audit log internally
+        await apiPut(`/api/evaluations/${existingEval.id}`, {
           marks: parsedMarks,
-        }
-      )
+          remarks: remarks.trim(),
+        })
+      } else {
+        // Create via backend — handles notification + audit log + assignment status update
+        await apiPost('/api/evaluations', {
+          submission_id: selectedSubmission.id,
+          marks: parsedMarks,
+          max_marks: 10,
+          remarks: remarks.trim(),
+        })
+      }
 
       toast.success('Evaluation saved successfully!')
       setDrawerOpen(false)

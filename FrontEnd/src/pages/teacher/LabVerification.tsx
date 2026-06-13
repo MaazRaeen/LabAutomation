@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiPatch, apiPost } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { CheckSquare, Loader2, Eye, CheckCircle2, Search, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -98,12 +99,8 @@ export const LabVerification: React.FC = () => {
 
   const handleVerifySingle = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('lab_records')
-        .update({ status: 'verified' })
-        .eq('id', id)
-
-      if (error) throw error
+      // PATCH via backend — body must match verifyLabRecordSchema: { status }
+      await apiPatch(`/api/lab-records/${id}/verify`, { status: 'verified' })
       toast.success('Lab record marked as verified')
       setSelectedIds(prev => prev.filter(item => item !== id))
       fetchRecords(false)
@@ -116,12 +113,8 @@ export const LabVerification: React.FC = () => {
     if (selectedIds.length === 0) return
     setBatchVerifying(true)
     try {
-      const { error } = await supabase
-        .from('lab_records')
-        .update({ status: 'verified' })
-        .in('id', selectedIds)
-
-      if (error) throw error
+      // POST /api/lab-records/batch-verify — body must match batchVerifyLabRecordsSchema: { record_ids, status }
+      await apiPost('/api/lab-records/batch-verify', { record_ids: selectedIds, status: 'verified' })
       toast.success(`Successfully verified ${selectedIds.length} records`)
       setSelectedIds([])
       fetchRecords(false)

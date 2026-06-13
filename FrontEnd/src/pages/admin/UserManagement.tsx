@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { apiGet, apiPut, apiDelete } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { Search, Filter, AlertCircle, UserCheck, UserX, Shield, Award, Calendar, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { logAudit } from '../../lib/dbUtils'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Profile {
@@ -27,16 +27,12 @@ export const UserManagement: React.FC = () => {
 
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, department, created_at, is_active')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setProfiles(data || [])
+      // Fetch from backend — uses service role key so admin can see all users
+      const data = await apiGet('/api/admin/users')
+      setProfiles(data.users || [])
     } catch (err: any) {
       console.error('Error fetching user profiles:', err)
-      toast.error('Failed to load user accounts. Ensure you have run the database migration.')
+      toast.error('Failed to load user accounts.')
     } finally {
       setLoading(false)
     }
@@ -48,25 +44,8 @@ export const UserManagement: React.FC = () => {
 
   const handleRoleChange = async (profileId: string, newRole: 'student' | 'teacher' | 'admin') => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', profileId)
-
-      if (error) throw error
-      
-      // Log audit event
-      await logAudit(
-        user.id,
-        'update_user_role',
-        'profiles',
-        profileId,
-        {
-          target_user_id: profileId,
-          new_role: newRole,
-        }
-      )
-      
+      // PUT /api/admin/users/:userId/role — backend handles audit log
+      await apiPut(`/api/admin/users/${profileId}/role`, { role: newRole })
       toast.success('User role updated successfully!')
       fetchProfiles()
     } catch (err: any) {
@@ -77,7 +56,7 @@ export const UserManagement: React.FC = () => {
 
   const handleToggleActive = async (profileId: string, currentStatus: boolean) => {
     try {
-      // is_active might default to true. We toggle its state.
+      // Update active status via Supabase (profile field toggle)
       const { error } = await supabase
         .from('profiles')
         .update({ is_active: !currentStatus })
@@ -86,19 +65,6 @@ export const UserManagement: React.FC = () => {
       if (error) throw error
 
       const statusMsg = currentStatus ? 'deactivated' : 'activated'
-      
-      // Log audit event
-      await logAudit(
-        user.id,
-        currentStatus ? 'deactivate_user' : 'activate_user',
-        'profiles',
-        profileId,
-        {
-          target_user_id: profileId,
-          new_status: !currentStatus,
-        }
-      )
-
       toast.success(`User successfully ${statusMsg}!`)
       fetchProfiles()
     } catch (err: any) {
@@ -114,23 +80,8 @@ export const UserManagement: React.FC = () => {
     if (!isConfirmed) return
 
     try {
-      const { error } = await supabase.rpc('delete_user_account', { target_user_id: profileId })
-
-      if (error) throw error
-
-      // Log audit event
-      await logAudit(
-        user.id,
-        'delete_user_account',
-        'profiles',
-        profileId,
-        {
-          target_user_id: profileId,
-          target_user_name: fullName,
-          target_user_role: role,
-        }
-      )
-
+      // DELETE /api/admin/users/:id — backend handles cascading deletion + audit log
+      await apiDelete(`/api/admin/users/${profileId}`)
       toast.success('User account and all associated records deleted permanently!')
       fetchProfiles()
     } catch (err: any) {

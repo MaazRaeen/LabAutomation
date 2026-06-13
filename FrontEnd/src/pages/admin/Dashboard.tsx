@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
+import { apiGet } from '../../lib/api'
 import { Users, Code, Edit3, ClipboardList, ShieldAlert, ArrowRight, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
@@ -35,54 +35,26 @@ export const Dashboard: React.FC = () => {
     else setLoading(true)
 
     try {
-      // 1. Fetch counts in parallel
-      const [studentsRes, teachersRes, submissionsRes, revisionsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'teacher'),
-        supabase.from('code_submissions').select('id', { count: 'exact', head: true }),
-        supabase.from('marks_revision_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-      ])
-
-      if (studentsRes.error) throw studentsRes.error
-      if (teachersRes.error) throw teachersRes.error
-      if (submissionsRes.error) throw submissionsRes.error
-      if (revisionsRes.error) throw revisionsRes.error
-
+      // Fetch system stats from backend (service role bypasses RLS for accurate counts)
+      const statsData = await apiGet('/api/admin/stats')
       setStats({
-        totalStudents: studentsRes.count || 0,
-        totalTeachers: teachersRes.count || 0,
-        totalSubmissions: submissionsRes.count || 0,
-        pendingRevisions: revisionsRes.count || 0,
+        totalStudents: statsData.stats?.total_students ?? 0,
+        totalTeachers: statsData.stats?.total_teachers ?? 0,
+        totalSubmissions: statsData.stats?.total_submissions ?? 0,
+        pendingRevisions: statsData.stats?.pending_marks_revisions ?? 0,
       })
 
-      // 2. Fetch recent 20 audit logs
-      const { data: logsData, error: logsError } = await supabase
-        .from('audit_logs')
-        .select(`
-          id,
-          action,
-          target_table,
-          created_at,
-          actor:profiles!audit_logs_actor_id_fkey (
-            full_name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (logsError) throw logsError
-
-      if (logsData) {
-        const formattedLogs = logsData.map((item: any) => ({
-          id: item.id,
-          action: item.action,
-          target_table: item.target_table,
-          created_at: item.created_at,
-          actor: Array.isArray(item.actor) ? item.actor[0] : item.actor
-        })) as AuditLog[]
-        setLogs(formattedLogs)
-      }
+      // Fetch recent 20 audit logs from backend
+      const logsData = await apiGet('/api/admin/audit-logs?limit=20&page=1')
+      const rawLogs = logsData.logs || []
+      const formattedLogs: AuditLog[] = rawLogs.map((item: any) => ({
+        id: item.id,
+        action: item.action,
+        target_table: item.target_table,
+        created_at: item.created_at,
+        actor: Array.isArray(item.actor) ? item.actor[0] : item.actor,
+      }))
+      setLogs(formattedLogs)
     } catch (err: any) {
       console.error('Error fetching admin dashboard data:', err)
       toast.error('Failed to load dashboard statistics')
