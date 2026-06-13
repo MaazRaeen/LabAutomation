@@ -5,7 +5,10 @@ export const createExperimentSchema = z.object({
   subject: z.string().min(1, { message: 'Subject is required' }),
   description: z.string().min(1, { message: 'Description is required' }),
   deadline: z.string().datetime({ message: 'Deadline must be a valid ISO 8601 date string' }),
-  instructions_url: z.string().optional()
+  instructions_url: z.string().optional(),
+  target_semester: z.string().optional().nullable(),
+  target_session: z.string().optional().nullable(),
+  target_section: z.string().optional().nullable()
 })
 
 export const assignExperimentSchema = z.object({

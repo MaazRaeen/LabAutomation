@@ -7,7 +7,20 @@ import { supabaseAdmin } from '../config/supabase.js'
 // - Returns created experiment
 export const createExperiment = async (req, res, next) => {
   try {
-    const { title, subject, description, deadline, instructions_url } = req.body
+    const {
+      title,
+      subject,
+      description,
+      deadline,
+      instructions_url,
+      target_semester,
+      target_session,
+      target_section
+    } = req.body
+
+    const targetSemVal = target_semester === 'all' || !target_semester ? null : target_semester
+    const targetSessVal = target_session === 'all' || !target_session ? null : target_session.trim()
+    const targetSectVal = target_section === 'all' || !target_section ? null : target_section.trim()
 
     const { data: experiment, error } = await supabaseAdmin
       .from('experiments')
@@ -17,13 +30,52 @@ export const createExperiment = async (req, res, next) => {
         description,
         deadline,
         instructions_url,
-        created_by: req.user.id
+        created_by: req.user.id,
+        target_semester: targetSemVal,
+        target_session: targetSessVal,
+        target_section: targetSectVal
       })
       .select()
       .single()
 
     if (error) {
       return next(error)
+    }
+
+    // Auto-assign students based on semester, session, and section
+    let studentQuery = supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'student')
+
+    if (targetSemVal) {
+      studentQuery = studentQuery.eq('semester', targetSemVal)
+    }
+    if (targetSessVal) {
+      studentQuery = studentQuery.eq('session', targetSessVal)
+    }
+    if (targetSectVal) {
+      studentQuery = studentQuery.eq('section', targetSectVal)
+    }
+
+    const { data: students, error: studentError } = await studentQuery
+
+    if (studentError) {
+      console.error('Failed to fetch students for auto-assignment:', studentError)
+    } else if (students && students.length > 0) {
+      const assignments = students.map((student) => ({
+        experiment_id: experiment.id,
+        student_id: student.id,
+        status: 'pending'
+      }))
+
+      const { error: assignError } = await supabaseAdmin
+        .from('experiment_assignments')
+        .insert(assignments)
+
+      if (assignError) {
+        console.error('Failed to auto-assign experiment to students:', assignError)
+      }
     }
 
     // Log to audit_logs

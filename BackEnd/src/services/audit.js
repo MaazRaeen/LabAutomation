@@ -4,11 +4,11 @@ export const logAudit = async (userId, action, tableName, recordId, details = {}
   const { data, error } = await supabaseAdmin
     .from('audit_logs')
     .insert({
-      user_id: userId,
+      actor_id: userId,
       action,
-      table_name: tableName,
-      record_id: recordId,
-      details,
+      target_table: tableName,
+      target_id: recordId,
+      metadata: details,
     })
     .select()
     .single()
