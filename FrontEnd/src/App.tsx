@@ -10,6 +10,11 @@ import Register from './pages/auth/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import PlaceholderView from './pages/PlaceholderView'
 
+// Student Portal Pages
+import StudentDashboard from './pages/student/Dashboard'
+import StudentExperiments from './pages/student/Experiments'
+import StudentSubmitCode from './pages/student/SubmitCode'
+
 // Layouts
 import StudentLayout from './layouts/StudentLayout'
 import TeacherLayout from './layouts/TeacherLayout'
@@ -78,9 +83,9 @@ function App() {
         <Route path="/student" element={<ProtectedRoute roles={['student']} />}>
           <Route element={<StudentLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<PlaceholderView title="Student Dashboard" />} />
-            <Route path="experiments" element={<PlaceholderView title="My Experiments" />} />
-            <Route path="submit" element={<PlaceholderView title="Submit Code" />} />
+            <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="experiments" element={<StudentExperiments />} />
+            <Route path="submit" element={<StudentSubmitCode />} />
             <Route path="records" element={<PlaceholderView title="Lab Records" />} />
             <Route path="progress" element={<PlaceholderView title="My Progress" />} />
             <Route path="notifications" element={<PlaceholderView title="Notifications" />} />
