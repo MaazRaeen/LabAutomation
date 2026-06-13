@@ -56,6 +56,7 @@ export const Register: React.FC = () => {
             .upsert({
               id: data.user.id,
               full_name: fullName,
+              email,
               role,
               department,
               enrollment_no: role === 'student' ? enrollmentNo : null,

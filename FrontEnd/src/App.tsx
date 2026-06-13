@@ -16,6 +16,7 @@ import StudentExperiments from './pages/student/Experiments'
 import StudentSubmitCode from './pages/student/SubmitCode'
 import StudentLabRecords from './pages/student/LabRecords'
 import StudentResubmissionRequest from './pages/student/ResubmissionRequest'
+import StudentProgress from './pages/student/Progress'
 
 // Teacher Portal Pages
 import TeacherDashboard from './pages/teacher/Dashboard'
@@ -23,6 +24,11 @@ import TeacherExperiments from './pages/teacher/Experiments'
 import TeacherSubmissions from './pages/teacher/Submissions'
 import TeacherLabVerification from './pages/teacher/LabVerification'
 import TeacherResubmissions from './pages/teacher/Resubmissions'
+
+// Admin Portal Pages
+import AdminDashboard from './pages/admin/Dashboard'
+import AdminUserManagement from './pages/admin/UserManagement'
+import AdminMarksRevision from './pages/admin/MarksRevision'
 
 // Layouts
 import StudentLayout from './layouts/StudentLayout'
@@ -97,7 +103,7 @@ function App() {
             <Route path="submit" element={<StudentSubmitCode />} />
             <Route path="records" element={<StudentLabRecords />} />
             <Route path="resubmissions" element={<StudentResubmissionRequest />} />
-            <Route path="progress" element={<PlaceholderView title="My Progress" />} />
+            <Route path="progress" element={<StudentProgress />} />
             <Route path="notifications" element={<PlaceholderView title="Notifications" />} />
           </Route>
         </Route>
@@ -120,8 +126,9 @@ function App() {
         <Route path="/admin" element={<ProtectedRoute roles={['admin']} />}>
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<PlaceholderView title="Admin Dashboard" />} />
-            <Route path="users" element={<PlaceholderView title="User Management" />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUserManagement />} />
+            <Route path="revisions" element={<AdminMarksRevision />} />
             <Route path="submissions" element={<PlaceholderView title="All Submissions" />} />
             <Route path="audit-logs" element={<PlaceholderView title="Audit Logs" />} />
             <Route path="reports" element={<PlaceholderView title="Reports" />} />
