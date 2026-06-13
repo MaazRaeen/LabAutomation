@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { Search, Filter, AlertCircle, UserCheck, UserX, Shield, Award, Calendar } from 'lucide-react'
+import { Search, Filter, AlertCircle, UserCheck, UserX, Shield, Award, Calendar, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { logAudit } from '../../lib/dbUtils'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -103,6 +103,38 @@ export const UserManagement: React.FC = () => {
       fetchProfiles()
     } catch (err: any) {
       toast.error(err.message || 'Operation failed. Ensure migration is applied.')
+      console.error(err)
+    }
+  }
+
+  const handleDeleteUser = async (profileId: string, fullName: string, role: string) => {
+    const isConfirmed = window.confirm(
+      `Are you sure you want to permanently delete the ${role} account for "${fullName}"?\n\nThis action CANNOT be undone and will delete all their records (submissions, grades, etc.) from the database.`
+    )
+    if (!isConfirmed) return
+
+    try {
+      const { error } = await supabase.rpc('delete_user_account', { target_user_id: profileId })
+
+      if (error) throw error
+
+      // Log audit event
+      await logAudit(
+        user.id,
+        'delete_user_account',
+        'profiles',
+        profileId,
+        {
+          target_user_id: profileId,
+          target_user_name: fullName,
+          target_user_role: role,
+        }
+      )
+
+      toast.success('User account and all associated records deleted permanently!')
+      fetchProfiles()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete user account')
       console.error(err)
     }
   }
@@ -259,31 +291,40 @@ export const UserManagement: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Action buttons (Deactivate/Activate) */}
+                      {/* Action buttons (Deactivate/Activate & Delete) */}
                       <td className="px-6 py-4 text-right">
                         {profile.id === user.id ? (
                           <span className="text-xs text-slate-500 italic pr-2">Protected</span>
                         ) : (
-                          <button
-                            onClick={() => handleToggleActive(profile.id, isActive)}
-                            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
-                              isActive
-                                ? 'bg-rose-550/10 hover:bg-rose-600 border-rose-500/20 text-rose-450 hover:text-white'
-                                : 'bg-emerald-600 hover:bg-emerald-500 border-transparent text-white'
-                            }`}
-                          >
-                            {isActive ? (
-                              <>
-                                <UserX className="w-3.5 h-3.5" />
-                                <span>Deactivate</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="w-3.5 h-3.5" />
-                                <span>Activate</span>
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleToggleActive(profile.id, isActive)}
+                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                                isActive
+                                  ? 'bg-rose-550/10 hover:bg-rose-600 border-rose-500/20 text-rose-450 hover:text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-500 border-transparent text-white'
+                              }`}
+                            >
+                              {isActive ? (
+                                <>
+                                  <UserX className="w-3.5 h-3.5" />
+                                  <span>Deactivate</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                  <span>Activate</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(profile.id, profile.full_name, profile.role)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-600 hover:text-white"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
