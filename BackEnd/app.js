@@ -36,7 +36,7 @@ app.get('/health', (req, res) => {
 })
 
 // Route registrations
-app.use('/api/auth', authRoutes)
+app.use('/api', authRoutes)
 app.use('/api/experiments', experimentRoutes)
 app.use('/api/submissions', submissionRoutes)
 app.use('/api/lab-records', labRecordRoutes)
