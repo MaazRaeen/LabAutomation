@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { Calendar, Clock, HelpCircle, Loader2, X, Play } from 'lucide-react'
+import { Calendar, Clock, HelpCircle, X, Play } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Experiment {
   id: string
@@ -98,11 +99,7 @@ export const Experiments: React.FC = () => {
   })
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   return (

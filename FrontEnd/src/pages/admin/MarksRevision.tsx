@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { Loader2, CheckCircle2, XCircle, AlertCircle, X, Calendar } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { createNotification, logAudit } from '../../lib/dbUtils'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface RevisionRequest {
   id: string
@@ -14,6 +16,7 @@ interface RevisionRequest {
   created_at: string
   evaluation_id: string
   teacher: {
+    id: string
     full_name: string
     enrollment_no: string
   }
@@ -54,6 +57,7 @@ export const MarksRevision: React.FC = () => {
           created_at,
           evaluation_id,
           teacher:profiles!marks_revision_requests_teacher_id_fkey (
+            id,
             full_name,
             enrollment_no
           ),
@@ -150,6 +154,25 @@ export const MarksRevision: React.FC = () => {
 
       if (requestUpdateError) throw requestUpdateError
 
+      // 3. Create notification for teacher
+      const notificationMsg = `The marks revision request for student "${selectedRequest.student?.full_name}" in experiment "${selectedRequest.experiment?.title || 'Experiment'}" has been ${targetStatus}.`
+      await createNotification(selectedRequest.teacher.id, notificationMsg)
+
+      // 4. Log audit event
+      await logAudit(
+        user.id,
+        `resolve_revision_${targetStatus}`,
+        'marks_revision_requests',
+        selectedRequest.id,
+        {
+          teacher_id: selectedRequest.teacher.id,
+          evaluation_id: selectedRequest.evaluation_id,
+          original_marks: selectedRequest.original_marks,
+          requested_marks: selectedRequest.requested_marks,
+          status: targetStatus
+        }
+      )
+
       toast.success(`Marks revision request successfully ${targetStatus}!`)
       setModalOpen(false)
       setSelectedRequest(null)
@@ -165,11 +188,7 @@ export const MarksRevision: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   return (

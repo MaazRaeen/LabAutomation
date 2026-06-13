@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase'
 import { useAuthStore } from './store/authStore'
 
 // Pages & Components
+import Landing from './pages/Landing'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -136,7 +137,7 @@ function App() {
         </Route>
 
         {/* Wildcard Fallbacks */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import NotificationBell from '../components/NotificationBell'
 
 interface NavItem {
   label: string
@@ -151,6 +152,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
           </div>
 
           <div className="flex items-center gap-4">
+            <NotificationBell />
             <span className="hidden sm:inline-block text-xs font-medium text-[#6366F1] bg-[#6366F1]/10 border border-[#6366F1]/20 rounded-full px-2.5 py-0.5">
               {displayRole}
             </span>

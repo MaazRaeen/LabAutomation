@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { RefreshCw, Loader2, Search, Filter, AlertCircle, CheckCircle2, XCircle, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { createNotification, logAudit } from '../../lib/dbUtils'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface ResubmissionRequest {
   id: string
@@ -140,6 +142,23 @@ export const Resubmissions: React.FC = () => {
         }
       }
 
+      // 3. Create notification for student
+      const notificationMessage = `Your resubmission request for experiment "${selectedRequest.experiment?.title || 'Experiment'}" has been ${newStatus}.`
+      await createNotification(selectedRequest.student_id, notificationMessage)
+
+      // 4. Log audit event
+      await logAudit(
+        user.id,
+        `review_resubmission_${newStatus}`,
+        'resubmission_requests',
+        selectedRequest.id,
+        {
+          student_id: selectedRequest.student_id,
+          experiment_id: selectedRequest.experiment_id,
+          status: newStatus
+        }
+      )
+
       toast.success(`Request successfully ${newStatus}!`)
       setModalOpen(false)
       setSelectedRequest(null)
@@ -168,11 +187,7 @@ export const Resubmissions: React.FC = () => {
   })
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   return (

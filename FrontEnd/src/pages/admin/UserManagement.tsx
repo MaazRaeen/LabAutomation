@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { Loader2, Search, Filter, AlertCircle, UserCheck, UserX, Shield, Award, Calendar } from 'lucide-react'
+import { Search, Filter, AlertCircle, UserCheck, UserX, Shield, Award, Calendar } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { logAudit } from '../../lib/dbUtils'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Profile {
   id: string
@@ -53,6 +55,18 @@ export const UserManagement: React.FC = () => {
 
       if (error) throw error
       
+      // Log audit event
+      await logAudit(
+        user.id,
+        'update_user_role',
+        'profiles',
+        profileId,
+        {
+          target_user_id: profileId,
+          new_role: newRole,
+        }
+      )
+      
       toast.success('User role updated successfully!')
       fetchProfiles()
     } catch (err: any) {
@@ -72,6 +86,19 @@ export const UserManagement: React.FC = () => {
       if (error) throw error
 
       const statusMsg = currentStatus ? 'deactivated' : 'activated'
+      
+      // Log audit event
+      await logAudit(
+        user.id,
+        currentStatus ? 'deactivate_user' : 'activate_user',
+        'profiles',
+        profileId,
+        {
+          target_user_id: profileId,
+          new_status: !currentStatus,
+        }
+      )
+
       toast.success(`User successfully ${statusMsg}!`)
       fetchProfiles()
     } catch (err: any) {
@@ -93,11 +120,7 @@ export const UserManagement: React.FC = () => {
   })
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   return (

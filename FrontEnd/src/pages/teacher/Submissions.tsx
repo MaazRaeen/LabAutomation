@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { Search, HelpCircle, Loader2, Eye, Award, CheckCircle2, ChevronRight, X, FileCode, CheckSquare, Filter, RefreshCw } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { createNotification, logAudit } from '../../lib/dbUtils'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Evaluation {
   id: string
@@ -197,10 +199,11 @@ export const Submissions: React.FC = () => {
       const existingEval = selectedSubmission.evaluations && selectedSubmission.evaluations.length > 0
         ? selectedSubmission.evaluations[0]
         : null
+      let evaluationId = ''
 
       if (existingEval) {
         // Update
-        const { error: evalError } = await supabase
+        const { data, error: evalError } = await supabase
           .from('evaluations')
           .update({
             marks: parsedMarks,
@@ -208,11 +211,14 @@ export const Submissions: React.FC = () => {
             evaluated_at: new Date().toISOString()
           })
           .eq('id', existingEval.id)
+          .select('id')
+          .single()
 
         if (evalError) throw evalError
+        evaluationId = data?.id || existingEval.id
       } else {
         // Insert
-        const { error: evalError } = await supabase
+        const { data, error: evalError } = await supabase
           .from('evaluations')
           .insert({
             submission_id: selectedSubmission.id,
@@ -221,8 +227,11 @@ export const Submissions: React.FC = () => {
             max_marks: 10,
             remarks: remarks.trim()
           })
+          .select('id')
+          .single()
 
         if (evalError) throw evalError
+        evaluationId = data?.id || ''
       }
 
       // Update experiment assignment to verified
@@ -235,6 +244,23 @@ export const Submissions: React.FC = () => {
       if (assignError) {
         console.error('Error updating assignment status:', assignError)
       }
+
+      // 1. Create notification for student
+      const notificationMessage = `Your code submission for experiment "${selectedSubmission.experiment?.title || 'Experiment'}" has been graded: ${parsedMarks}/10.`
+      await createNotification(selectedSubmission.student_id, notificationMessage)
+
+      // 2. Log audit event
+      await logAudit(
+        user.id,
+        existingEval ? 'update_evaluation' : 'create_evaluation',
+        'evaluations',
+        evaluationId,
+        {
+          submission_id: selectedSubmission.id,
+          student_id: selectedSubmission.student_id,
+          marks: parsedMarks,
+        }
+      )
 
       toast.success('Evaluation saved successfully!')
       setDrawerOpen(false)
@@ -268,11 +294,7 @@ export const Submissions: React.FC = () => {
   })
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   return (

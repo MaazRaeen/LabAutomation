@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { BookOpen, CheckCircle, Clock, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react'
+import { BookOpen, CheckCircle, Clock, AlertTriangle, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Experiment {
   id: string
@@ -83,11 +84,7 @@ export const Dashboard: React.FC = () => {
   }, [user])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
-      </div>
-    )
+    return <LoadingSpinner className="min-h-[400px]" size={40} />
   }
 
   const recentAssignments = assignments.slice(0, 5)
