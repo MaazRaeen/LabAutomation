@@ -77,13 +77,13 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Admin Dashboard</h2>
-          <p className="text-slate-400 text-sm">System statistics, user logs, and management tools.</p>
+          <h2 className="text-3xl font-black text-[#111827] mb-1">Admin Dashboard</h2>
+          <p className="text-[#6B7280] text-sm">System statistics, user logs, and management tools.</p>
         </div>
         <button
           onClick={() => fetchDashboardData(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-[#1E293B] border border-slate-800 rounded-lg hover:border-slate-700 transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-[#6B7280] hover:text-[#111827] bg-white border border-[#E5E7EB] hover:bg-[#F8FAFC] rounded-lg transition cursor-pointer self-start sm:self-auto disabled:opacity-50 shadow-sm"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -93,49 +93,49 @@ export const Dashboard: React.FC = () => {
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Students */}
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg hover:border-slate-700/80 transition flex items-center gap-4 group">
-          <div className="p-3 bg-[#6366F1]/10 rounded-lg text-[#6366F1] group-hover:scale-110 transition duration-300">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#EEF2FF] rounded-xl text-[#4F46E5] group-hover:scale-110 transition duration-300">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Students</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.totalStudents}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Total Students</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.totalStudents}</p>
           </div>
         </div>
 
         {/* Total Teachers */}
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg hover:border-slate-700/80 transition flex items-center gap-4 group">
-          <div className="p-3 bg-teal-500/10 rounded-lg text-teal-400 group-hover:scale-110 transition duration-300">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#E0F2FE] rounded-xl text-[#0284C7] group-hover:scale-110 transition duration-300">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Teachers</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.totalTeachers}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Total Teachers</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.totalTeachers}</p>
           </div>
         </div>
 
         {/* Total Submissions */}
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg hover:border-slate-700/80 transition flex items-center gap-4 group">
-          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400 group-hover:scale-110 transition duration-300">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#D1FAE5] rounded-xl text-[#10B981] group-hover:scale-110 transition duration-300">
             <Code className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Submissions Evaluated</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.totalSubmissions}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Submissions Evaluated</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.totalSubmissions}</p>
           </div>
         </div>
 
         {/* Pending Mark Revisions */}
         <Link 
           to="/admin/revisions"
-          className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg hover:border-[#6366F1] transition flex items-center gap-4 group cursor-pointer"
+          className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group cursor-pointer hover:border-[#4F46E5]"
         >
-          <div className="p-3 bg-amber-500/10 rounded-lg text-amber-500 group-hover:scale-110 transition duration-300">
+          <div className="p-3 bg-[#FEF3C7] rounded-xl text-[#D97706] group-hover:scale-110 transition duration-300">
             <Edit3 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Pending Revisions</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.pendingRevisions}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Pending Revisions</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.pendingRevisions}</p>
           </div>
         </Link>
       </div>
@@ -143,13 +143,13 @@ export const Dashboard: React.FC = () => {
       {/* Grid: Audit Logs & Quick Links */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Recent Audit Logs */}
-        <div className="lg:col-span-8 bg-[#1E293B] border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-[#6366F1]" />
+        <div className="lg:col-span-8 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-[#E5E7EB] flex items-center justify-between">
+            <h3 className="text-base font-bold text-[#111827] flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-[#4F46E5]" />
               System Audit Logs
             </h3>
-            <span className="text-[10px] text-slate-500 font-semibold bg-[#0F172A] border border-slate-800 px-2 py-0.5 rounded uppercase tracking-wider">
+            <span className="text-[10px] text-[#6B7280] font-bold bg-[#F8FAFC] border border-[#E5E7EB] px-2 py-0.5 rounded uppercase tracking-wider">
               Last 20 operations
             </span>
           </div>
@@ -158,14 +158,14 @@ export const Dashboard: React.FC = () => {
             {logs.length > 0 ? (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-[#182235]/40">
+                  <tr className="border-b border-[#E5E7EB] text-xs font-semibold text-[#6B7280] uppercase bg-[#F8FAFC]">
                     <th className="px-6 py-3.5">Actor</th>
                     <th className="px-6 py-3.5">Action</th>
                     <th className="px-6 py-3.5">Table</th>
                     <th className="px-6 py-3.5">Timestamp</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-sm">
+                <tbody className="divide-y divide-[#E5E7EB]/60 text-sm">
                   {logs.map((log) => {
                     const timeFormatted = new Date(log.created_at).toLocaleString(undefined, {
                       month: 'short',
@@ -176,24 +176,24 @@ export const Dashboard: React.FC = () => {
                     })
 
                     return (
-                      <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
+                      <tr key={log.id} className="hover:bg-[#F8FAFC]/80 transition-colors">
                         <td className="px-6 py-3">
-                          <div className="font-semibold text-white">
+                          <div className="font-bold text-[#111827]">
                             {log.actor?.full_name || 'System / DB Trigger'}
                           </div>
-                          <div className="text-xs text-slate-500 font-medium">
+                          <div className="text-xs text-[#6B7280] font-semibold">
                             {log.actor?.email || 'N/A'}
                           </div>
                         </td>
                         <td className="px-6 py-3">
-                          <span className="text-xs font-mono bg-[#0F172A] border border-slate-800 px-2 py-0.5 rounded text-indigo-400">
+                          <span className="text-xs font-mono bg-[#EEF2FF] border border-[#EEF2FF] px-2 py-0.5 rounded text-[#4F46E5] font-semibold">
                             {log.action}
                           </span>
                         </td>
-                        <td className="px-6 py-3 font-semibold text-slate-300 capitalize">
+                        <td className="px-6 py-3 font-semibold text-[#111827] capitalize">
                           {log.target_table.replace('_', ' ')}
                         </td>
-                        <td className="px-6 py-3 text-slate-400 text-xs">
+                        <td className="px-6 py-3 text-[#6B7280] text-xs">
                           {timeFormatted}
                         </td>
                       </tr>
@@ -202,8 +202,8 @@ export const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             ) : (
-              <div className="px-6 py-12 text-center text-slate-450 text-sm">
-                <ShieldAlert className="w-12 h-12 text-slate-650 mx-auto mb-4" />
+              <div className="px-6 py-12 text-center text-[#6B7280] text-sm">
+                <ShieldAlert className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                 No audit log records found in the database.
               </div>
             )}
@@ -211,32 +211,32 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Links Panel */}
-        <div className="lg:col-span-4 bg-[#1E293B] border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl self-start space-y-6">
-          <h3 className="text-base font-bold text-white uppercase tracking-wider pb-3 border-b border-slate-800">
+        <div className="lg:col-span-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-6 md:p-8 shadow-sm self-start space-y-6">
+          <h3 className="text-base font-bold text-[#111827] uppercase tracking-wider pb-3 border-b border-[#E5E7EB]">
             System Shortcuts
           </h3>
 
           <div className="space-y-4">
             <Link 
               to="/admin/users"
-              className="flex items-center justify-between p-4 bg-[#0F172A] border border-slate-800 hover:border-[#6366F1] rounded-xl transition group cursor-pointer"
+              className="flex items-center justify-between p-4 bg-[#F8FAFC] border border-[#E5E7EB] hover:border-[#4F46E5] rounded-xl transition group cursor-pointer"
             >
               <div>
-                <h4 className="text-sm font-bold text-white group-hover:text-[#6366F1] transition">Manage Users</h4>
-                <p className="text-slate-500 text-xs mt-1">Review accounts, roles & active status.</p>
+                <h4 className="text-sm font-bold text-[#111827] group-hover:text-[#4F46E5] transition">Manage Users</h4>
+                <p className="text-[#6B7280] text-xs mt-1">Review accounts, roles & active status.</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:translate-x-1 group-hover:text-[#6366F1] transition-all" />
+              <ArrowRight className="w-4 h-4 text-[#6B7280] group-hover:translate-x-1 group-hover:text-[#4F46E5] transition-all" />
             </Link>
 
             <Link 
               to="/admin/reports"
-              className="flex items-center justify-between p-4 bg-[#0F172A] border border-slate-800 hover:border-[#6366F1] rounded-xl transition group cursor-pointer"
+              className="flex items-center justify-between p-4 bg-[#F8FAFC] border border-[#E5E7EB] hover:border-[#4F46E5] rounded-xl transition group cursor-pointer"
             >
               <div>
-                <h4 className="text-sm font-bold text-white group-hover:text-[#6366F1] transition">System Reports</h4>
-                <p className="text-slate-500 text-xs mt-1">Export marksheets and view visual summaries.</p>
+                <h4 className="text-sm font-bold text-[#111827] group-hover:text-[#4F46E5] transition">System Reports</h4>
+                <p className="text-[#6B7280] text-xs mt-1">Export marksheets and view visual summaries.</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:translate-x-1 group-hover:text-[#6366F1] transition-all" />
+              <ArrowRight className="w-4 h-4 text-[#6B7280] group-hover:translate-x-1 group-hover:text-[#4F46E5] transition-all" />
             </Link>
           </div>
         </div>

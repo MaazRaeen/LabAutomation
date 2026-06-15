@@ -1,4 +1,3 @@
-import React from 'react'
 import PlaceholderView from '../PlaceholderView'
 
 export default function Resubmissions() {

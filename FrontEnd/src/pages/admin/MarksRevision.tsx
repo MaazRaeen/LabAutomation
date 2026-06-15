@@ -160,17 +160,17 @@ export const MarksRevision: React.FC = () => {
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-1">Marks Revision Requests</h2>
-        <p className="text-slate-400 text-sm">Review, approve, or reject student marks adjustments requested by teachers.</p>
+        <h2 className="text-3xl font-black text-[#111827] mb-1">Marks Revision Requests</h2>
+        <p className="text-[#6B7280] text-sm">Review, approve, or reject student marks adjustments requested by teachers.</p>
       </div>
 
       {/* Requests Table */}
-      <div className="bg-[#1E293B] border border-slate-800 rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-3xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           {requests.length > 0 ? (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-[#182235]/40">
+                <tr className="border-b border-[#E5E7EB] text-xs font-semibold text-[#6B7280] uppercase bg-[#F8FAFC]">
                   <th className="px-6 py-4">Student</th>
                   <th className="px-6 py-4">Requested By (Teacher)</th>
                   <th className="px-6 py-4">Experiment Details</th>
@@ -180,7 +180,7 @@ export const MarksRevision: React.FC = () => {
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
+              <tbody className="divide-y divide-[#E5E7EB]/60 text-sm">
                 {requests.map((req) => {
                   const requestedTime = new Date(req.created_at).toLocaleDateString(undefined, {
                     month: 'short',
@@ -189,43 +189,43 @@ export const MarksRevision: React.FC = () => {
                   })
 
                   return (
-                    <tr key={req.id} className="hover:bg-slate-800/20 transition-colors">
+                    <tr key={req.id} className="hover:bg-[#F8FAFC]/80 transition-colors">
                       {/* Student Name */}
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-white">
+                        <div className="font-bold text-[#111827]">
                           {req.student?.full_name}
                         </div>
-                        <div className="text-xs text-slate-500 font-medium font-mono">
+                        <div className="text-xs text-[#6B7280] font-semibold font-mono">
                           {req.student?.enrollment_no}
                         </div>
                       </td>
 
                       {/* Teacher Name */}
-                      <td className="px-6 py-4 font-medium text-slate-300">
+                      <td className="px-6 py-4 font-bold text-[#111827]">
                         {req.teacher?.full_name}
                       </td>
 
                       {/* Experiment Title */}
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-300">
+                        <div className="font-bold text-[#111827]">
                           {req.experiment?.title}
                         </div>
-                        <div className="text-xs text-slate-500 font-medium">
+                        <div className="text-xs text-[#6B7280] font-semibold">
                           {req.experiment?.subject}
                         </div>
                       </td>
 
                       {/* Justification Details */}
                       <td className="px-6 py-4 max-w-[200px]">
-                        <p className="text-slate-350 text-xs leading-relaxed line-clamp-2" title={req.justification}>
+                        <p className="text-[#6B7280] text-xs leading-relaxed line-clamp-2 font-medium" title={req.justification}>
                           {req.justification}
                         </p>
                       </td>
 
                       {/* Requested At */}
-                      <td className="px-6 py-4 text-slate-400">
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                      <td className="px-6 py-4 text-[#6B7280]">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold">
+                          <Calendar className="w-3.5 h-3.5 text-[#6B7280]" />
                           <span>{requestedTime}</span>
                         </div>
                       </td>
@@ -233,9 +233,9 @@ export const MarksRevision: React.FC = () => {
                       {/* Marks Awarded Shift */}
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5 font-bold">
-                          <span className="text-rose-400 text-xs line-through">{req.original_marks}</span>
-                          <span className="text-slate-400 text-[10px]">→</span>
-                          <span className="text-emerald-400 text-sm">{req.requested_marks}</span>
+                          <span className="text-[#EF4444] text-xs line-through">{req.original_marks}</span>
+                          <span className="text-[#6B7280] text-[10px]">→</span>
+                          <span className="text-[#10B981] text-sm">{req.requested_marks}</span>
                         </div>
                       </td>
 
@@ -244,13 +244,13 @@ export const MarksRevision: React.FC = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleOpenActionModal(req, 'reject')}
-                            className="px-2.5 py-1.5 border border-rose-500/20 hover:border-rose-500 bg-rose-500/10 hover:bg-rose-500 text-rose-450 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                            className="px-2.5 py-1.5 border border-[#FEE2E2] bg-[#FEE2E2] hover:bg-[#EF4444] text-[#EF4444] hover:text-white rounded-lg text-xs font-bold transition cursor-pointer"
                           >
                             Reject
                           </button>
                           <button
                             onClick={() => handleOpenActionModal(req, 'approve')}
-                            className="px-2.5 py-1.5 bg-[#6366F1] hover:bg-[#5053db] hover:shadow text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[#4F46E5] hover:bg-[#4338CA] hover:shadow text-white rounded-lg text-xs font-bold transition cursor-pointer"
                           >
                             Approve
                           </button>
@@ -262,10 +262,10 @@ export const MarksRevision: React.FC = () => {
               </tbody>
             </table>
           ) : (
-            <div className="px-6 py-16 text-center text-slate-400 text-sm">
-              <AlertCircle className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <p className="font-bold text-white mb-1 font-semibold">No Pending Revisions</p>
-              <p className="text-slate-400 text-xs">There are currently no pending grade revision requests waiting for approval.</p>
+            <div className="px-6 py-16 text-center text-[#6B7280] text-sm">
+              <AlertCircle className="w-12 h-12 text-[#6B7280]/60 mx-auto mb-4" />
+              <p className="font-bold text-[#111827] mb-1 text-base">No Pending Revisions</p>
+              <p className="text-[#6B7280] text-xs font-medium">There are currently no pending grade revision requests waiting for approval.</p>
             </div>
           )}
         </div>
@@ -276,49 +276,49 @@ export const MarksRevision: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
           {/* Overlay backdrop */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs" 
             onClick={() => !savingAction && setModalOpen(false)}
           ></div>
 
           {/* Modal Content */}
-          <div className="relative w-full max-w-md bg-[#1E293B] border border-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 text-slate-100 z-10 animate-scaleUp">
+          <div className="relative w-full max-w-md bg-[#FFFFFF] border border-[#E5E7EB] rounded-3xl shadow-2xl p-6 md:p-8 text-[#111827] z-10 animate-scaleUp">
             <button
               onClick={() => !savingAction && setModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white disabled:opacity-50"
+              className="absolute top-4 right-4 text-[#6B7280] hover:text-[#111827] disabled:opacity-50"
               disabled={savingAction}
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Modal Title */}
-            <h3 className="text-lg font-bold text-white mb-2 capitalize">
+            <h3 className="text-xl font-extrabold text-[#111827] mb-2 capitalize">
               {actionType} Marks Revision
             </h3>
-            <p className="text-slate-400 text-xs mb-6">
+            <p className="text-[#6B7280] text-xs font-medium mb-6">
               Review and finalize this marks adjustment request. You can provide an optional feedback note.
             </p>
 
             {/* Details Box */}
-            <div className="bg-[#0F172A] border border-slate-850 p-4 rounded-xl space-y-2 text-xs mb-5">
+            <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl space-y-2 text-xs mb-5">
               <div className="flex justify-between">
-                <span className="text-slate-500 font-semibold uppercase">Student</span>
-                <span className="text-white font-bold">{selectedRequest.student?.full_name}</span>
+                <span className="text-[#6B7280] font-semibold uppercase">Student</span>
+                <span className="text-[#111827] font-bold">{selectedRequest.student?.full_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 font-semibold uppercase">Requested By</span>
-                <span className="text-slate-350 font-medium">{selectedRequest.teacher?.full_name}</span>
+                <span className="text-[#6B7280] font-semibold uppercase">Requested By</span>
+                <span className="text-[#111827] font-semibold">{selectedRequest.teacher?.full_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 font-semibold uppercase">Marks Shift</span>
+                <span className="text-[#6B7280] font-semibold uppercase">Marks Shift</span>
                 <div className="font-bold flex gap-1">
-                  <span className="text-rose-400 line-through">{selectedRequest.original_marks}</span>
-                  <span>→</span>
-                  <span className="text-emerald-400">{selectedRequest.requested_marks}</span>
+                  <span className="text-[#EF4444] line-through">{selectedRequest.original_marks}</span>
+                  <span className="text-[#6B7280]">→</span>
+                  <span className="text-[#10B981]">{selectedRequest.requested_marks}</span>
                 </div>
               </div>
-              <div className="pt-2 border-t border-slate-800 flex flex-col gap-1 text-slate-300">
-                <span className="text-slate-500 font-semibold uppercase">Teacher Justification:</span>
-                <p className="text-slate-400 leading-relaxed bg-[#1E293B]/40 p-2.5 rounded border border-slate-850 max-h-24 overflow-y-auto whitespace-pre-wrap">
+              <div className="pt-2 border-t border-[#E5E7EB] flex flex-col gap-1">
+                <span className="text-[#6B7280] font-semibold uppercase">Teacher Justification:</span>
+                <p className="text-[#111827] bg-[#FFFFFF] border border-[#E5E7EB] p-2.5 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap leading-relaxed font-medium">
                   {selectedRequest.justification}
                 </p>
               </div>
@@ -326,7 +326,7 @@ export const MarksRevision: React.FC = () => {
 
             {/* Admin Note textarea */}
             <div className="space-y-2 mb-6">
-              <label className="block text-slate-300 text-xs font-semibold uppercase tracking-wider" htmlFor="adminNote">
+              <label className="block text-[#6B7280] text-xs font-bold uppercase tracking-wider" htmlFor="adminNote">
                 Admin Note / Remarks
               </label>
               <textarea
@@ -335,17 +335,17 @@ export const MarksRevision: React.FC = () => {
                 placeholder={actionType === 'reject' ? 'Explain the rejection reason... (Optional)' : 'e.g. Approved. Revision completed. (Optional)'}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#0F172A] border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-650 focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent transition resize-none"
+                className="w-full px-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl text-sm text-[#111827] placeholder-[#6B7280]/50 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition resize-none"
                 disabled={savingAction}
               />
             </div>
 
             {/* Actions Footer */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E7EB]">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 border border-slate-800 hover:border-slate-700 rounded-lg text-xs font-semibold text-slate-450 hover:text-white transition cursor-pointer"
+                className="px-4 py-2 border border-[#E5E7EB] hover:border-[#E5E7EB] rounded-lg text-xs font-bold text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] transition cursor-pointer"
                 disabled={savingAction}
               >
                 Cancel
@@ -353,10 +353,10 @@ export const MarksRevision: React.FC = () => {
               <button
                 type="button"
                 onClick={handleConfirmAction}
-                className={`px-4 py-2 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md ${
+                className={`px-4 py-2 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
                   actionType === 'approve'
-                    ? 'bg-emerald-600 hover:bg-emerald-500'
-                    : 'bg-rose-600 hover:bg-rose-500'
+                    ? 'bg-[#10B981] hover:bg-[#059669]'
+                    : 'bg-[#EF4444] hover:bg-[#DC2626]'
                 }`}
                 disabled={savingAction}
               >

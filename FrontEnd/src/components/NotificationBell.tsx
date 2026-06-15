@@ -115,12 +115,12 @@ export const NotificationBell: React.FC = () => {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
+        className="relative p-2 text-[#6B7280] hover:text-[#4F46E5] rounded-lg hover:bg-[#EEF2FF] transition cursor-pointer"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 rounded-full text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+          <span className="absolute top-1 right-1 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] font-black text-white flex items-center justify-center animate-pulse">
             {unreadCount}
           </span>
         )}
@@ -128,15 +128,15 @@ export const NotificationBell: React.FC = () => {
 
       {/* Dropdown Container */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-[#1E293B] border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-scaleUp">
+        <div className="absolute right-0 mt-2 w-80 bg-[#FFFFFF] border border-[#E5E7EB] rounded-xl shadow-xl overflow-hidden z-50 animate-scaleUp">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-bold text-white uppercase tracking-wider">Alerts & Notifications</span>
+          <div className="px-4 py-3 border-b border-[#E5E7EB] flex items-center justify-between">
+            <span className="text-xs font-bold text-[#111827] uppercase tracking-wider">Alerts & Notifications</span>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
                 disabled={markingRead}
-                className="text-[10px] text-[#6366F1] hover:text-[#5053db] font-bold hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                className="text-[10px] text-[#4F46E5] hover:text-[#4338CA] font-bold hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
               >
                 {markingRead ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -149,10 +149,10 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           {/* List Content */}
-          <div className="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+          <div className="max-h-64 overflow-y-auto divide-y divide-[#E5E7EB]/60">
             {loading && notifications.length === 0 ? (
               <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-5 h-5 text-[#6366F1] animate-spin" />
+                <Loader2 className="w-5 h-5 text-[#4F46E5] animate-spin" />
               </div>
             ) : notifications.length > 0 ? (
               notifications.map((n) => {
@@ -169,11 +169,11 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={n.id}
                     className={`px-4 py-3 text-xs leading-normal transition ${
-                      n.is_read ? 'bg-transparent text-slate-400' : 'bg-[#6366F1]/5 text-slate-200 font-medium'
+                      n.is_read ? 'bg-transparent text-[#6B7280]' : 'bg-[#EEF2FF]/40 text-[#111827] font-semibold'
                     }`}
                   >
                     <p>{n.message}</p>
-                    <div className="mt-1 flex items-center justify-between text-[9px] text-slate-500 font-semibold">
+                    <div className="mt-1 flex items-center justify-between text-[9px] text-[#6B7280] font-semibold">
                       <span>{dateStr}</span>
                       <span>{timeStr}</span>
                     </div>
@@ -181,8 +181,8 @@ export const NotificationBell: React.FC = () => {
                 )
               })
             ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500">
-                <AlertCircle className="w-8 h-8 text-slate-650 mb-2" />
+              <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                <AlertCircle className="w-8 h-8 text-slate-300 mb-2" />
                 <span className="text-xs">No notifications found</span>
               </div>
             )}

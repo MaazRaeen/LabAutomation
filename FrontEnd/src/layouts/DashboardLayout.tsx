@@ -39,12 +39,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
   const displayRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : ''
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#111827] flex">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-[#0F172A] border-r border-slate-800 shrink-0">
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          <Link to="/" className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-sm font-black">L</span>
+      <aside className="hidden md:flex flex-col w-64 bg-[#FFFFFF] border-r border-[#E5E7EB] shrink-0">
+        <div className="h-16 flex items-center px-6 border-b border-[#E5E7EB]">
+          <Link to="/" className="text-xl font-bold text-[#111827] tracking-wide flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-[#4F46E5] flex items-center justify-center text-sm font-black text-white">L</span>
             <span>LabEval Pro</span>
           </Link>
         </div>
@@ -57,10 +57,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
                 key={index}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                  `flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
                     isActive
-                      ? 'bg-[#6366F1] text-white font-semibold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-[#EEF2FF] text-[#4F46E5]'
+                      : 'text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/60'
                   }`
                 }
               >
@@ -71,14 +71,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-slate-800/40">
-            <div className="w-8 h-8 rounded-full bg-[#6366F1]/20 flex items-center justify-center text-[#6366F1] shrink-0 border border-[#6366F1]/30">
+        <div className="p-4 border-t border-[#E5E7EB]">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB]/80">
+            <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#4F46E5] shrink-0 border border-[#EEF2FF]">
               <UserIcon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{userFullName}</p>
-              <p className="text-[10px] text-slate-500 font-medium truncate">{displayRole}</p>
+              <p className="text-xs font-bold text-[#111827] truncate">{userFullName}</p>
+              <p className="text-[10px] text-[#6B7280] font-semibold truncate">{displayRole}</p>
             </div>
           </div>
         </div>
@@ -86,15 +86,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
 
       {/* Mobile Drawer (off-canvas overlay) */}
       <div className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/60 animate-fadeIn" onClick={() => setSidebarOpen(false)}></div>
+        <div className="absolute inset-0 bg-black/40 animate-fadeIn" onClick={() => setSidebarOpen(false)}></div>
         
-        <div className={`absolute inset-y-0 left-0 w-64 bg-[#0F172A] border-r border-slate-800 flex flex-col transition-transform duration-300 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
-            <Link to="/" className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-sm font-black">L</span>
+        <div className={`absolute inset-y-0 left-0 w-64 bg-[#FFFFFF] border-r border-[#E5E7EB] flex flex-col transition-transform duration-300 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="h-16 flex items-center justify-between px-6 border-b border-[#E5E7EB]">
+            <Link to="/" className="text-xl font-bold text-[#111827] tracking-wide flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-[#4F46E5] flex items-center justify-center text-sm font-black text-white">L</span>
               <span>LabEval Pro</span>
             </Link>
-            <button className="text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <button className="text-[#6B7280] hover:text-[#111827]" onClick={() => setSidebarOpen(false)}>
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -108,10 +108,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    `flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all ${
                       isActive
-                        ? 'bg-[#6366F1] text-white'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        ? 'bg-[#EEF2FF] text-[#4F46E5]'
+                        : 'text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/60'
                     }`
                   }
                 >
@@ -122,14 +122,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
             })}
           </nav>
 
-          <div className="p-4 border-t border-slate-800">
-            <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-slate-800/40">
-              <div className="w-8 h-8 rounded-full bg-[#6366F1]/20 flex items-center justify-center text-[#6366F1] shrink-0">
+          <div className="p-4 border-t border-[#E5E7EB]">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB]/80">
+              <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#4F46E5] shrink-0 border border-[#EEF2FF]">
                 <UserIcon className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{userFullName}</p>
-                <p className="text-[10px] text-slate-500 font-medium truncate">{displayRole}</p>
+                <p className="text-xs font-bold text-[#111827] truncate">{userFullName}</p>
+                <p className="text-[10px] text-[#6B7280] font-semibold truncate">{displayRole}</p>
               </div>
             </div>
           </div>
@@ -138,28 +138,28 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-[#0F172A] border-b border-slate-800 flex items-center justify-between px-6 z-10">
+        <header className="h-16 bg-[#FFFFFF] border-b border-[#E5E7EB] flex items-center justify-between px-6 z-10">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 text-slate-400 hover:text-white md:hidden"
+              className="p-2 -ml-2 text-[#6B7280] hover:text-[#111827] md:hidden"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-semibold text-white tracking-wide hidden md:block">
+            <h1 className="text-lg font-bold text-[#111827] tracking-wide hidden md:block">
               {title}
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
             <NotificationBell />
-            <span className="hidden sm:inline-block text-xs font-medium text-[#6366F1] bg-[#6366F1]/10 border border-[#6366F1]/20 rounded-full px-2.5 py-0.5">
+            <span className="hidden sm:inline-block text-xs font-bold text-[#4F46E5] bg-[#EEF2FF] border border-[#EEF2FF]/80 rounded-full px-2.5 py-0.5">
               {displayRole}
             </span>
-            <div className="h-6 w-px bg-slate-800 hidden sm:block"></div>
+            <div className="h-6 w-px bg-[#E5E7EB] hidden sm:block"></div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-slate-800 hover:border-rose-500/20 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-[#6B7280] hover:text-[#EF4444] hover:bg-[#EF4444]/10 rounded-lg transition-colors border border-[#E5E7EB] hover:border-[#EF4444]/20 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign Out</span>
@@ -167,9 +167,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ navItems, titl
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-[#0F172A] p-6">
-          <div className="max-w-7xl mx-auto">
-            <React.Suspense fallback={<div className="text-center py-10 text-slate-400">Loading...</div>}>
+        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] p-6">
+          <div className="max-w-7xl mx-auto animate-fadeIn">
+            <React.Suspense fallback={<div className="text-center py-10 text-[#6B7280]">Loading...</div>}>
               <Outlet />
             </React.Suspense>
           </div>

@@ -88,62 +88,101 @@ export const Dashboard: React.FC = () => {
   }
 
   const recentAssignments = assignments.slice(0, 5)
+  const todayFormatted = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+  const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student'
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-1">Overview</h2>
-        <p className="text-slate-400 text-sm">Track your laboratory experiments, deadlines, and evaluations.</p>
+      {/* Premium Academic Hero Banner */}
+      <div 
+        className="relative overflow-hidden rounded-[24px] p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
+        style={{ background: 'linear-gradient(135deg, #4338CA 0%, #1E3A8A 100%)' }}
+      >
+        <div className="space-y-2 z-10">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-wider uppercase bg-white/10 border border-white/20 rounded-full text-indigo-100">
+            {todayFormatted}
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Welcome back, {userFullName}!
+          </h2>
+          <p className="text-indigo-200/90 text-sm max-w-xl font-medium">
+            Monitor your assigned laboratory experiments, verify codes, and track academic evaluation statuses seamlessly.
+          </p>
+        </div>
+
+        {/* Status Chips inside Banner */}
+        <div className="flex flex-wrap gap-2.5 z-10">
+          <span className="px-3.5 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-xs font-bold text-white transition cursor-default">
+            📢 {stats.pending} Labs Pending
+          </span>
+          <span className="px-3.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/25 border border-emerald-500/20 rounded-xl text-xs font-bold text-emerald-200 transition cursor-default">
+            ✓ {stats.submitted} Completed
+          </span>
+          <span className="px-3.5 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/25 border border-indigo-500/20 rounded-xl text-xs font-bold text-indigo-200 transition cursor-default">
+            📚 {stats.total} Total Assigned
+          </span>
+        </div>
+
+        {/* Decorative subtle circles in background */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-xl pointer-events-none"></div>
+        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
       </div>
 
+      {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg flex items-center gap-4">
-          <div className="p-3 bg-[#6366F1]/10 rounded-lg text-[#6366F1]">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#EEF2FF] rounded-xl text-[#4F46E5] group-hover:scale-110 transition duration-300">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Labs</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Total Labs</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.total}</p>
           </div>
         </div>
 
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg flex items-center gap-4">
-          <div className="p-3 bg-amber-500/10 rounded-lg text-amber-500">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#FEF3C7] rounded-xl text-[#D97706] group-hover:scale-110 transition duration-300">
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Pending</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.pending}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Pending</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.pending}</p>
           </div>
         </div>
 
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg flex items-center gap-4">
-          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-500">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#D1FAE5] rounded-xl text-[#10B981] group-hover:scale-110 transition duration-300">
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Submitted</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.submitted}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Submitted</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.submitted}</p>
           </div>
         </div>
 
-        <div className="bg-[#1E293B] border border-slate-800 rounded-xl p-6 shadow-lg flex items-center gap-4">
-          <div className="p-3 bg-rose-500/10 rounded-lg text-rose-500">
+        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-4 group">
+          <div className="p-3 bg-[#FEE2E2] rounded-xl text-[#EF4444] group-hover:scale-110 transition duration-300">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Late</p>
-            <p className="text-2xl font-bold text-white mt-1">{stats.late}</p>
+            <p className="text-xs text-[#6B7280] font-semibold uppercase tracking-wider">Late</p>
+            <p className="text-3xl font-black text-[#111827] mt-1">{stats.late}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#1E293B] border border-slate-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white">Recent Experiments</h3>
+      {/* Recent Experiments Panel */}
+      <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[#E5E7EB] flex items-center justify-between">
+          <h3 className="text-lg font-bold text-[#111827]">Recent Experiments</h3>
           <Link
             to="/student/experiments"
-            className="text-xs font-semibold text-[#6366F1] hover:text-[#5053db] transition flex items-center gap-1"
+            className="text-xs font-bold text-[#4F46E5] hover:text-[#4338CA] transition flex items-center gap-1 cursor-pointer"
           >
             View all
             <ArrowRight className="w-3.5 h-3.5" />
@@ -154,14 +193,14 @@ export const Dashboard: React.FC = () => {
           {recentAssignments.length > 0 ? (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-[#182235]/40">
+                <tr className="border-b border-[#E5E7EB] text-xs font-semibold text-[#6B7280] uppercase bg-[#F8FAFC]">
                   <th className="px-6 py-4">Title</th>
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Deadline</th>
                   <th className="px-6 py-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
+              <tbody className="divide-y divide-[#E5E7EB]/60 text-sm">
                 {recentAssignments.map((assignment) => {
                   const deadlineDate = assignment.experiments?.deadline
                     ? new Date(assignment.experiments.deadline).toLocaleDateString(undefined, {
@@ -174,27 +213,27 @@ export const Dashboard: React.FC = () => {
                     : 'No deadline'
 
                   const statusStyles: Record<string, string> = {
-                    pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                    submitted: 'bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/20',
-                    verified: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                    late: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                    pending: 'bg-[#FEF3C7] text-[#D97706] border-[#FEF3C7]',
+                    submitted: 'bg-[#EEF2FF] text-[#4F46E5] border-[#EEF2FF]',
+                    verified: 'bg-[#D1FAE5] text-[#10B981] border-[#D1FAE5]',
+                    late: 'bg-[#FEE2E2] text-[#EF4444] border-[#FEE2E2]',
                   }
 
                   const displayStatus = assignment.status ? assignment.status.toUpperCase() : ''
 
                   return (
-                    <tr key={assignment.id} className="hover:bg-slate-800/20 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-white">
+                    <tr key={assignment.id} className="hover:bg-[#F8FAFC]/80 transition-colors">
+                      <td className="px-6 py-4 font-bold text-[#111827]">
                         {assignment.experiments?.title || 'Untitled Experiment'}
                       </td>
-                      <td className="px-6 py-4 text-slate-300">
+                      <td className="px-6 py-4 text-[#6B7280] font-semibold">
                         {assignment.experiments?.subject || 'General'}
                       </td>
-                      <td className="px-6 py-4 text-slate-400">
+                      <td className="px-6 py-4 text-[#6B7280] font-medium">
                         {deadlineDate}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border ${statusStyles[assignment.status] || 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border ${statusStyles[assignment.status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                           {displayStatus}
                         </span>
                       </td>
@@ -204,7 +243,7 @@ export const Dashboard: React.FC = () => {
               </tbody>
             </table>
           ) : (
-            <div className="px-6 py-12 text-center text-slate-400 text-sm">
+            <div className="px-6 py-12 text-center text-[#6B7280] text-sm">
               No experiments have been assigned to you yet.
             </div>
           )}
