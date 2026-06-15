@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { Calendar, Edit2, Archive, Eye, X, Upload, Loader2, Plus, Search, HelpCircle, FileText, CheckCircle, RefreshCw } from 'lucide-react'
+import { Calendar, Edit2, Archive, Eye, X, Upload, Loader2, Plus, Search, HelpCircle, FileText, CheckCircle, RefreshCw, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { apiDelete } from '../../lib/api'
+
 
 interface Experiment {
   id: string
@@ -141,6 +143,22 @@ export const Experiments: React.FC = () => {
       toast.error(err.message || `Failed to change experiment status`)
     }
   }
+
+  const handleDelete = async (exp: Experiment) => {
+    if (!window.confirm(`Are you absolutely sure you want to permanently delete the experiment "${exp.title}"? This will delete all student submissions, grades, and associated files permanently.`)) {
+      return
+    }
+
+    try {
+      await apiDelete(`/api/experiments/${exp.id}`)
+      toast.success('Experiment and all details deleted permanently')
+      fetchExperiments()
+    } catch (err: any) {
+      console.error('Error deleting experiment:', err)
+      toast.error(err.message || 'Failed to delete experiment')
+    }
+  }
+
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -518,7 +536,16 @@ export const Experiments: React.FC = () => {
                     >
                       <Archive className="w-3.5 h-3.5" />
                     </button>
+
+                    <button
+                      onClick={() => handleDelete(exp)}
+                      className="p-2 bg-slate-800 hover:bg-rose-600/10 text-slate-400 hover:text-rose-500 border border-slate-700 hover:border-rose-600/20 rounded-lg transition cursor-pointer"
+                      title="Delete experiment permanently"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
                 </div>
               </div>
             )

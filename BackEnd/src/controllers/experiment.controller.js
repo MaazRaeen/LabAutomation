@@ -1,4 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.js'
+import { deleteFiles } from '../services/supabaseStorage.js'
+
 
 // 1. createExperiment(req, res)
 // - Teacher only (role check handled by middleware)
@@ -365,3 +367,127 @@ export const assignExperiment = async (req, res, next) => {
 
 // Keep original name for compatibility if needed
 export const getExperiments = getMyExperiments
+
+// 7. deleteExperiment(req, res)
+// - Teacher (must be creator) or Admin
+// - Fetches related submissions & lab records to get their file URLs
+// - Deletes all files from storage (instructions, submissions, lab-records)
+// - Deletes the experiment from the DB (cascading to assignments, submissions, evaluations, etc.)
+// - Logs to audit_logs
+export const deleteExperiment = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+    const userRole = req.user.role
+
+    // 1. Fetch experiment to verify existence and ownership
+    const { data: experiment, error: fetchError } = await supabaseAdmin
+      .from('experiments')
+      .select('created_by, instructions_url, title')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !experiment) {
+      return res.status(404).json({ error: 'Experiment not found' })
+    }
+
+    // Access control check: Must be the creator (teacher) or an admin
+    if (userRole === 'teacher' && experiment.created_by !== userId) {
+      return res.status(403).json({ error: 'Forbidden: You are not the creator of this experiment' })
+    }
+
+    // 2. Fetch all code submissions associated with this experiment
+    const { data: submissions, error: subError } = await supabaseAdmin
+      .from('code_submissions')
+      .select('file_url')
+      .eq('experiment_id', id)
+
+    if (subError) {
+      return next(subError)
+    }
+
+    // 3. Fetch all lab records associated with this experiment
+    const { data: labRecords, error: lrError } = await supabaseAdmin
+      .from('lab_records')
+      .select('file_url')
+      .eq('experiment_id', id)
+
+    if (lrError) {
+      return next(lrError)
+    }
+
+    // Helper to parse path from public URL
+    const extractStoragePath = (publicUrl, bucketName) => {
+      if (!publicUrl) return null
+      const marker = `/public/${bucketName}/`
+      const index = publicUrl.indexOf(marker)
+      if (index === -1) return null
+      return decodeURIComponent(publicUrl.substring(index + marker.length))
+    }
+
+    // 4. Collect and delete all files in storage
+    const instructionsPaths = []
+    if (experiment.instructions_url) {
+      const path = extractStoragePath(experiment.instructions_url, 'instructions')
+      if (path) instructionsPaths.push(path)
+    }
+
+    const submissionPaths = (submissions || [])
+      .map(s => extractStoragePath(s.file_url, 'submissions'))
+      .filter(Boolean)
+
+    const labRecordPaths = (labRecords || [])
+      .map(lr => extractStoragePath(lr.file_url, 'lab-records'))
+      .filter(Boolean)
+
+    // Run storage deletions
+    if (instructionsPaths.length > 0) {
+      await deleteFiles('instructions', instructionsPaths).catch(err =>
+        console.error('Failed to delete instructions file from storage:', err)
+      )
+    }
+
+    if (submissionPaths.length > 0) {
+      await deleteFiles('submissions', submissionPaths).catch(err =>
+        console.error('Failed to delete submission files from storage:', err)
+      )
+    }
+
+    if (labRecordPaths.length > 0) {
+      await deleteFiles('lab-records', labRecordPaths).catch(err =>
+        console.error('Failed to delete lab record files from storage:', err)
+      )
+    }
+
+    // 5. Delete experiment from the database
+    // (This triggers ON DELETE CASCADE for assignments, submissions, evaluations, lab records, resubmissions, revisions)
+    const { error: deleteError } = await supabaseAdmin
+      .from('experiments')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      return next(deleteError)
+    }
+
+    // 6. Log to audit_logs
+    const { error: logError } = await supabaseAdmin
+      .from('audit_logs')
+      .insert({
+        actor_id: userId,
+        action: 'experiment_deleted',
+        target_table: 'experiments',
+        target_id: id,
+        metadata: { title: experiment.title }
+      })
+
+    if (logError) {
+      console.error('Failed to log experiment deletion to audit_logs:', logError)
+    }
+
+    return res.status(200).json({ message: 'Experiment and all related details deleted permanently' })
+  } catch (error) {
+    next(error)
+  }
+}
+

@@ -64,4 +64,12 @@ router.post(
   experimentController.assignExperiment
 )
 
+// 7. DELETE /api/experiments/:id - Teacher (creator) or Admin
+router.delete(
+  '/:id',
+  auth,
+  allowRoles('teacher', 'admin'),
+  experimentController.deleteExperiment
+)
+
 export default router

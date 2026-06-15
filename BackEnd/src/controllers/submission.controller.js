@@ -33,7 +33,10 @@ export const submitCode = async (req, res, next) => {
       '.c': 'C',
       '.cpp': 'C++',
       '.js': 'JavaScript',
-      '.ts': 'TypeScript'
+      '.ts': 'TypeScript',
+      '.pdf': 'PDF',
+      '.doc': 'Word',
+      '.docx': 'Word'
     }
 
     const filename = req.file.originalname
@@ -43,7 +46,7 @@ export const submitCode = async (req, res, next) => {
 
     if (!language) {
       return res.status(400).json({
-        error: 'Invalid file extension. Allowed extensions are: .py, .java, .c, .cpp, .js, .ts'
+        error: 'Invalid file extension. Allowed extensions are: .py, .java, .c, .cpp, .js, .ts, .pdf, .doc, .docx'
       })
     }
 
