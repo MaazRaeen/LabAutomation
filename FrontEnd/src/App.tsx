@@ -37,47 +37,78 @@ import TeacherLayout from './layouts/TeacherLayout'
 import AdminLayout from './layouts/AdminLayout'
 
 function App() {
-  const { setUser, setRole, setSession, logout } = useAuthStore()
+  const { setUser, setRole, setSession, setLoading, logout } = useAuthStore()
 
   useEffect(() => {
-    // Check active session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session)
-        setUser(session.user)
-        
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) setRole(profile.role)
-          })
+    let isMounted = true
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          if (isMounted) {
+            setSession(session)
+            setUser(session.user)
+          }
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (isMounted && profile) {
+            setRole(profile.role)
+          }
+        }
+      } catch (err) {
+        console.error('Error initializing auth:', err)
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       }
-    })
+    }
+
+    initializeAuth()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        setSession(session)
-        setUser(session.user)
+        if (isMounted) {
+          setSession(session)
+          setUser(session.user)
+        }
         
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-        if (profile) setRole(profile.role)
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          if (profile && isMounted) {
+            setRole(profile.role)
+          }
+        } catch (err) {
+          console.error('Error fetching role on auth state change:', err)
+        } finally {
+          if (isMounted) {
+            setLoading(false)
+          }
+        }
       } else {
-        logout()
+        if (isMounted) {
+          logout()
+          setLoading(false)
+        }
       }
     })
 
     return () => {
+      isMounted = false
       subscription.unsubscribe()
     }
-  }, [setUser, setRole, setSession, logout])
+  }, [setUser, setRole, setSession, setLoading, logout])
 
   return (
     <BrowserRouter>

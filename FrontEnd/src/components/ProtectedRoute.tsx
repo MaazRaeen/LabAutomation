@@ -8,7 +8,18 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children }) => {
-  const { user, role, session } = useAuthStore()
+  const { user, role, session, loading } = useAuthStore()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-[#6B7280] font-medium text-sm">Verifying session...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!session || !user) {
     return <Navigate to="/login" replace />
