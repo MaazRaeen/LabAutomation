@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { useAuthStore } from '../store/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
@@ -17,6 +18,12 @@ async function getHeaders(isFormData = false) {
 }
 
 async function handleResponse(response: Response) {
+  if (response.status === 401) {
+    useAuthStore.getState().logout()
+    window.location.href = '/login'
+    throw new Error('Session expired. Please log in again.')
+  }
+
   if (!response.ok) {
     let errorMsg = 'An error occurred'
     try {

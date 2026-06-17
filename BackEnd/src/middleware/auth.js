@@ -11,6 +11,7 @@ export const auth = async (req, res, next) => {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
 
     if (error || !user) {
+      console.error('Auth check failed:', error ? error.message : 'No user found in session')
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
@@ -22,6 +23,7 @@ export const auth = async (req, res, next) => {
       .single()
 
     if (profileError || !profile) {
+      console.error('Profile fetch failed:', profileError ? profileError.message : 'No profile found for user')
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
