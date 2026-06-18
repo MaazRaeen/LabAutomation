@@ -345,6 +345,18 @@ export const Submissions: React.FC = () => {
 
   // Load code contents from storage URL
   const loadCodeFile = async (url: string) => {
+    const filename = url.split('/').pop() || ''
+    const ext = filename.split('.').pop()?.toLowerCase() || ''
+    const isDoc = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)
+
+    if (isDoc) {
+      // Skip downloading document binary code
+      setCodeLoading(false)
+      setCodeError('')
+      setCodeText('')
+      return
+    }
+
     try {
       setCodeLoading(true)
       setCodeError('')
@@ -892,45 +904,103 @@ export const Submissions: React.FC = () => {
                           <Loader2 className="w-8 h-8 animate-spin text-[#4F46E5] mb-2" />
                           <span>Retrieving file contents...</span>
                         </div>
-                      ) : codeError ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-4">
-                          <FileText className="w-16 h-16 text-rose-500/25" />
-                          <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
-                            {codeError}
-                          </p>
-                          <a
-                            href={activeVersionSub?.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-lg text-xs font-bold transition shadow"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Download File ({activeVersionSub?.language})</span>
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="flex-1 overflow-auto max-h-[400px]">
-                          {/* File info bar inside editor */}
-                          <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80 text-[10px] font-mono text-slate-500">
-                            <span>Format: <strong className="text-slate-300">{activeVersionSub?.language}</strong></span>
-                            <a
-                              href={activeVersionSub?.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[#4F46E5] hover:underline flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" /> Download Source
-                            </a>
+                      ) : (() => {
+                        const filename = activeVersionSub?.file_url.split('/').pop() || ''
+                        const ext = filename.split('.').pop()?.toLowerCase() || ''
+
+                        if (ext === 'pdf') {
+                          return (
+                            <div className="flex-1 flex flex-col min-h-[500px]">
+                              {/* File info bar inside editor */}
+                              <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80 text-[10px] font-mono text-slate-500">
+                                <span>Format: <strong className="text-slate-300">PDF Document</strong></span>
+                                <a
+                                  href={activeVersionSub?.file_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[#4F46E5] hover:underline flex items-center gap-1"
+                                >
+                                  <Download className="w-3 h-3" /> View PDF
+                                </a>
+                              </div>
+                              <iframe
+                                src={activeVersionSub?.file_url}
+                                className="w-full h-[500px] bg-white rounded-xl border border-slate-800 shadow-inner"
+                                title="PDF Document Preview"
+                              />
+                            </div>
+                          )
+                        }
+
+                        if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+                          const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeVersionSub?.file_url || '')}`
+                          return (
+                            <div className="flex-1 flex flex-col min-h-[500px]">
+                              {/* File info bar inside editor */}
+                              <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80 text-[10px] font-mono text-slate-500">
+                                <span>Format: <strong className="text-slate-300">Office Document ({ext.toUpperCase()})</strong></span>
+                                <a
+                                  href={activeVersionSub?.file_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[#4F46E5] hover:underline flex items-center gap-1"
+                                >
+                                  <Download className="w-3 h-3" /> Download Document
+                                </a>
+                              </div>
+                              <iframe
+                                src={officeUrl}
+                                className="w-full h-[500px] bg-white rounded-xl border border-slate-800 shadow-inner"
+                                title="Office Document Preview"
+                              />
+                            </div>
+                          )
+                        }
+
+                        if (codeError) {
+                          return (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-4">
+                              <FileText className="w-16 h-16 text-rose-500/25" />
+                              <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+                                {codeError}
+                              </p>
+                              <a
+                                href={activeVersionSub?.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-lg text-xs font-bold transition shadow"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Download File ({activeVersionSub?.language})</span>
+                              </a>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div className="flex-1 overflow-auto max-h-[400px]">
+                            {/* File info bar inside editor */}
+                            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800/80 text-[10px] font-mono text-slate-500">
+                              <span>Format: <strong className="text-slate-300">{activeVersionSub?.language}</strong></span>
+                              <a
+                                href={activeVersionSub?.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#4F46E5] hover:underline flex items-center gap-1"
+                              >
+                                <Download className="w-3 h-3" /> Download Source
+                              </a>
+                            </div>
+                            
+                            {/* Prism Syntax code block */}
+                            <pre ref={codePreRef} className="text-xs font-mono !bg-transparent !p-0 !m-0 overflow-visible">
+                              <code className={getLanguageClass(activeVersionSub?.language || '')}>
+                                {codeText}
+                              </code>
+                            </pre>
                           </div>
-                          
-                          {/* Prism Syntax code block */}
-                          <pre ref={codePreRef} className="text-xs font-mono !bg-transparent !p-0 !m-0 overflow-visible">
-                            <code className={getLanguageClass(activeVersionSub?.language || '')}>
-                              {codeText}
-                            </code>
-                          </pre>
-                        </div>
-                      )}
+                        )
+                      })()}
                     </div>
                   )}
 
