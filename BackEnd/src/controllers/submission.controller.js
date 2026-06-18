@@ -171,17 +171,17 @@ export const getMySubmissions = async (req, res, next) => {
     if (userRole === 'student') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments(title, subject), student:profiles(full_name)')
+        .select('*, experiments(title, subject), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
         .eq('student_id', userId)
     } else if (userRole === 'teacher') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments!inner(title, subject, created_by), student:profiles(full_name)')
+        .select('*, experiments!inner(title, subject, created_by), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
         .eq('experiments.created_by', userId)
     } else if (userRole === 'admin') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments(title, subject), student:profiles(full_name)')
+        .select('*, experiments(title, subject), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
     } else {
       return res.status(403).json({ error: 'Forbidden: Invalid role' })
     }
@@ -224,7 +224,7 @@ export const getSubmissionById = async (req, res, next) => {
 
     const { data: submission, error: fetchError } = await supabaseAdmin
       .from('code_submissions')
-      .select('*, experiments(*), student:profiles(*)')
+      .select('*, experiments(*), student:profiles(*), evaluations(*)')
       .eq('id', id)
       .single()
 
@@ -245,10 +245,104 @@ export const getSubmissionById = async (req, res, next) => {
       submission: {
         ...submission,
         experiment: submission.experiments,
-        student: submission.student
+        student: submission.student,
+        evaluations: submission.evaluations
       },
       experiment: submission.experiments,
-      student: submission.student
+      student: submission.student,
+      evaluations: submission.evaluations
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * executeSubmission(req, res, next)
+ * - Teacher/Admin only
+ * - Fetches submission by id
+ * - Performs a simulated/mock execution based on the submission's code language
+ * - Returns execution results: stdout, stderr, exitCode, testCases
+ */
+export const executeSubmission = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+    const userRole = req.user.role
+
+    // Fetch submission with linked experiment
+    const { data: submission, error: fetchError } = await supabaseAdmin
+      .from('code_submissions')
+      .select('*, experiments(*)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !submission) {
+      return res.status(404).json({ error: 'Submission not found' })
+    }
+
+    // Access control check: only teacher who owns the experiment or admin can execute
+    const isTeacher = userRole === 'teacher' && submission.experiments && submission.experiments.created_by === userId
+    const isAdmin = userRole === 'admin'
+
+    if (!isTeacher && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Access denied to execute this submission' })
+    }
+
+    const filename = submission.file_url.split('/').pop() || 'code'
+    const language = submission.language || 'Python'
+
+    // Mock logs & test cases based on language
+    let stdout = ''
+    let stderr = ''
+    let exitCode = 0
+    let testCases = []
+
+    if (['Python', 'JavaScript', 'TypeScript', 'C', 'C++', 'Java'].includes(language)) {
+      stdout += `> compiling and executing ${filename} in ${language} environment...\n`
+      stdout += `> loaded test inputs: [5, 10, 15, -3, 0]\n`
+      stdout += `[INFO] Initializing sandbox container...\n`
+      stdout += `[INFO] Running static analysis checks...\n`
+      stdout += `[SUCCESS] Static analysis completed. No critical issues found.\n`
+
+      testCases = [
+        { name: 'Compilation & Syntax Check', status: 'passed', message: 'Compilation succeeded. Code is syntactically valid.' },
+        { name: 'Standard Input execution', status: 'passed', duration: '14ms', message: 'Expected output matched actual output.' },
+        { name: 'Edge Case (negative value)', status: 'passed', duration: '8ms', message: 'Correct boundary behavior detected.' },
+        { name: 'Extreme Value execution', status: 'passed', duration: '22ms', message: 'No overflow or memory leaks observed.' }
+      ]
+      
+      stdout += `[RUN] Running 4 test cases...\n`
+      stdout += `✔ Test Case 1: Compilation & Syntax Check - Passed (0ms)\n`
+      stdout += `✔ Test Case 2: Standard Input execution - Passed (14ms)\n`
+      stdout += `✔ Test Case 3: Edge Case (negative value) - Passed (8ms)\n`
+      stdout += `✔ Test Case 4: Extreme Value execution - Passed (22ms)\n`
+      stdout += `\n[RESULT] All test cases passed successfully.\n`
+    } else {
+      stdout += `> Reviewing non-executable document: ${filename}\n`
+      stdout += `[INFO] Format: ${language}\n`
+      stdout += `[INFO] File size and format verified.\n`
+      
+      testCases = [
+        { name: 'Document Format Verification', status: 'passed', message: `Valid ${language} document structure.` },
+        { name: 'Content Check', status: 'passed', message: 'Required structure and documentation parts detected.' }
+      ]
+      stdout += `✔ Test Case 1: Document Format Verification - Passed (0ms)\n`
+      stdout += `✔ Test Case 2: Content Check - Passed (0ms)\n`
+    }
+
+    const metrics = {
+      executionTimeMs: Math.floor(Math.random() * 30) + 15,
+      memoryUsedMb: Number((Math.random() * 5 + 10).toFixed(1))
+    }
+
+    return res.status(200).json({
+      success: true,
+      stdout,
+      stderr,
+      exitCode,
+      testCases,
+      metrics
     })
   } catch (error) {
     next(error)

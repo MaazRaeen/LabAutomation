@@ -40,4 +40,12 @@ router.get(
   submissionController.getSubmissionById
 )
 
+// POST /api/submissions/:id/execute -> auth, allowRoles('teacher', 'admin'), executeSubmission
+router.post(
+  '/:id/execute',
+  auth,
+  allowRoles('teacher', 'admin'),
+  submissionController.executeSubmission
+)
+
 export default router

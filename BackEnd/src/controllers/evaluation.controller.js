@@ -16,7 +16,7 @@ import { createNotification } from '../services/notification.js'
 export const createEvaluation = async (req, res, next) => {
   try {
     const teacherId = req.user.id
-    const { submission_id, marks, max_marks, remarks } = req.body
+    const { submission_id, marks, max_marks, remarks, is_draft } = req.body
 
     // 1. Fetch submission and linked experiment to verify teacher owns it
     const { data: submission, error: subError } = await supabaseAdmin
@@ -51,6 +51,7 @@ export const createEvaluation = async (req, res, next) => {
     }
 
     const maxMarksVal = max_marks !== undefined ? max_marks : 10
+    const isDraftVal = is_draft === true
 
     // 3. Insert new evaluation
     const { data: evaluation, error: insertError } = await supabaseAdmin
@@ -60,7 +61,8 @@ export const createEvaluation = async (req, res, next) => {
         teacher_id: teacherId,
         marks,
         max_marks: maxMarksVal,
-        remarks
+        remarks,
+        is_draft: isDraftVal
       })
       .select()
       .single()
@@ -69,17 +71,31 @@ export const createEvaluation = async (req, res, next) => {
       return next(insertError)
     }
 
-    // 4. Notify student
-    const experimentTitle = submission.experiments.title || 'Experiment'
-    await createNotification(
-      submission.student_id,
-      `Your submission for ${experimentTitle} has been evaluated. Marks: ${marks}/${maxMarksVal}`
-    ).catch(err => console.error('Failed to create notification:', err))
+    // 4. Notify student and update student record if it's finalized (not draft)
+    if (!isDraftVal) {
+      const experimentTitle = submission.experiments.title || 'Experiment'
+      await createNotification(
+        submission.student_id,
+        `Your submission for ${experimentTitle} has been evaluated. Marks: ${marks}/${maxMarksVal}`
+      ).catch(err => console.error('Failed to create notification:', err))
+
+      // Update experiment_assignments.status to 'verified'
+      const { error: assignmentUpdateError } = await supabaseAdmin
+        .from('experiment_assignments')
+        .update({ status: 'verified' })
+        .eq('student_id', submission.student_id)
+        .eq('experiment_id', submission.experiment_id)
+
+      if (assignmentUpdateError) {
+        console.error('Failed to update assignment status to verified:', assignmentUpdateError)
+      }
+    }
 
     // 5. Log audit
+    const auditAction = isDraftVal ? 'evaluation_draft_created' : 'evaluation_created'
     await logAudit(
       teacherId,
-      'evaluation_created',
+      auditAction,
       'evaluations',
       evaluation.id,
       { marks, submission_id }
@@ -104,7 +120,7 @@ export const createEvaluation = async (req, res, next) => {
 export const updateEvaluation = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { marks, remarks } = req.body
+    const { marks, remarks, is_draft } = req.body
     const teacherId = req.user.id
 
     // 1. Fetch existing evaluation
@@ -125,8 +141,11 @@ export const updateEvaluation = async (req, res, next) => {
       })
     }
 
-    // 3. Block direct update if marks differ
-    if (marks !== undefined && marks !== evaluation.marks) {
+    const wasDraft = evaluation.is_draft
+    const requestIsDraft = is_draft !== undefined ? is_draft : wasDraft
+
+    // 3. Block direct update if marks differ AND the evaluation is NOT a draft
+    if (!wasDraft && marks !== undefined && marks !== evaluation.marks) {
       return res.status(400).json({
         error: 'Direct marks update is not allowed. Please submit a marks revision request to the administrator.'
       })
@@ -134,10 +153,12 @@ export const updateEvaluation = async (req, res, next) => {
 
     const updateData = {}
     if (remarks !== undefined) updateData.remarks = remarks
+    if (marks !== undefined) updateData.marks = marks
+    if (is_draft !== undefined) updateData.is_draft = is_draft
 
     let updatedEvaluation = evaluation
 
-    // 4. Allow updating remarks if present
+    // 4. Allow updating fields if present
     if (Object.keys(updateData).length > 0) {
       const { data, error: updateError } = await supabaseAdmin
         .from('evaluations')
@@ -152,13 +173,50 @@ export const updateEvaluation = async (req, res, next) => {
       updatedEvaluation = data
     }
 
-    // 5. Log audit
+    // 5. If transitioning from draft to finalized (not draft), notify student and update assignment status
+    if (wasDraft && !requestIsDraft) {
+      // Fetch submission details to get student_id & experiment_id
+      const { data: submission, error: subError } = await supabaseAdmin
+        .from('code_submissions')
+        .select('*, experiments(title)')
+        .eq('id', evaluation.submission_id)
+        .single()
+
+      if (!subError && submission) {
+        const experimentTitle = submission.experiments?.title || 'Experiment'
+        const marksVal = marks !== undefined ? marks : evaluation.marks
+        const maxMarksVal = evaluation.max_marks
+
+        await createNotification(
+          submission.student_id,
+          `Your submission for ${experimentTitle} has been evaluated. Marks: ${marksVal}/${maxMarksVal}`
+        ).catch(err => console.error('Failed to create notification:', err))
+
+        // Update assignment status to verified
+        const { error: assignmentUpdateError } = await supabaseAdmin
+          .from('experiment_assignments')
+          .update({ status: 'verified' })
+          .eq('student_id', submission.student_id)
+          .eq('experiment_id', submission.experiment_id)
+
+        if (assignmentUpdateError) {
+          console.error('Failed to update assignment status to verified:', assignmentUpdateError)
+        }
+      }
+    }
+
+    // 6. Log audit
+    const auditAction = (wasDraft && !requestIsDraft) ? 'evaluation_finalized' : 'evaluation_updated'
     await logAudit(
       teacherId,
-      'evaluation_updated',
+      auditAction,
       'evaluations',
       id,
-      { remarks_updated: remarks !== undefined }
+      { 
+        remarks_updated: remarks !== undefined, 
+        marks_updated: marks !== undefined,
+        finalized: (wasDraft && !requestIsDraft)
+      }
     ).catch(err => console.error('Failed to log audit:', err))
 
     return res.status(200).json({ evaluation: updatedEvaluation })

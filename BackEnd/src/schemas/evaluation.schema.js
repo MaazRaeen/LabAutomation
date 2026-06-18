@@ -8,7 +8,8 @@ export const createEvaluationSchema = z.object({
   max_marks: z.number().default(10),
   remarks: z.string()
     .min(5, { message: 'Remarks must be at least 5 characters long' })
-    .max(1000, { message: 'Remarks cannot exceed 1000 characters' })
+    .max(1000, { message: 'Remarks cannot exceed 1000 characters' }),
+  is_draft: z.boolean().optional()
 })
 
 export const updateEvaluationSchema = createEvaluationSchema.partial()
