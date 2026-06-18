@@ -71,6 +71,12 @@ interface Submission {
   experiments: Experiment
   student: Profile
   evaluations?: Evaluation[] | Evaluation | null
+  late_reason?: string
+  late_status?: 'pending' | 'approved' | 'rejected'
+  late_reviewed_by?: string
+  late_reviewed_at?: string
+  late_teacher_comment?: string
+  reviewer?: { full_name: string } | { full_name: string }[] | null
 }
 
 export const Submissions: React.FC = () => {
@@ -97,28 +103,19 @@ export const Submissions: React.FC = () => {
   const [submissionHistory, setSubmissionHistory] = useState<Submission[]>([])
   const [activeVersionSub, setActiveVersionSub] = useState<Submission | null>(null)
   
-  // UI Tabs inside workspaces
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'code' | 'console'>('code')
-
   // Code review loader
   const [codeText, setCodeText] = useState('')
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
 
-  // Code execution runner states
-  const [runningCode, setRunningCode] = useState(false)
-  const [runResult, setRunResult] = useState<{
-    stdout: string
-    stderr: string
-    exitCode: number
-    testCases: Array<{ name: string; status: 'passed' | 'failed'; duration?: string; message?: string }>
-    metrics?: { executionTimeMs: number; memoryUsedMb: number }
-  } | null>(null)
-
   // Grading form states
   const [marks, setMarks] = useState<number | ''>('')
   const [remarks, setRemarks] = useState('')
   const [isSubmittingGrade, setIsSubmittingGrade] = useState(false)
+
+  // Late submission review states
+  const [lateComment, setLateComment] = useState('')
+  const [isReviewingLate, setIsReviewingLate] = useState(false)
 
   // Marks revision modal states
   const [revisionModalOpen, setRevisionModalOpen] = useState(false)
@@ -179,10 +176,10 @@ export const Submissions: React.FC = () => {
 
   // Trigger syntax highlighting on code view changes
   useEffect(() => {
-    if (codePreRef.current && codeText && activeWorkspaceTab === 'code') {
+    if (codePreRef.current && codeText) {
       Prism.highlightAllUnder(codePreRef.current)
     }
-  }, [codeText, activeWorkspaceTab, activeVersionSub])
+  }, [codeText, activeVersionSub])
 
   // Helper to extract file extension / language
   const getLanguageClass = (lang: string) => {
@@ -261,8 +258,6 @@ export const Submissions: React.FC = () => {
   // Load a selected submission's details
   const handleSelectSubmission = async (sub: Submission) => {
     setSelectedSub(sub)
-    setActiveWorkspaceTab('code')
-    setRunResult(null)
     setCodeError('')
     setCodeText('')
 
@@ -270,7 +265,7 @@ export const Submissions: React.FC = () => {
       // 1. Fetch submission history for this student & experiment
       const { data: history, error: histError } = await supabase
         .from('code_submissions')
-        .select('*, experiments(*), student:profiles(*), evaluations(*)')
+        .select('*, experiments(*), student:profiles!code_submissions_student_id_fkey(*), evaluations(*), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name)')
         .eq('student_id', sub.student_id)
         .eq('experiment_id', sub.experiment_id)
         .order('version', { ascending: false })
@@ -317,7 +312,6 @@ export const Submissions: React.FC = () => {
   // Switch between submission versions in code review panel
   const handleSwitchVersion = (versionSub: Submission) => {
     setActiveVersionSub(versionSub)
-    setRunResult(null)
     loadCodeFile(versionSub.file_url)
 
     // Re-populate grading fields from this version's evaluation if it exists
@@ -388,24 +382,6 @@ export const Submissions: React.FC = () => {
     }
   }
 
-  // Execute Code via backend route
-  const handleExecuteCode = async () => {
-    if (!activeVersionSub) return
-    setRunningCode(true)
-    setRunResult(null)
-    setActiveWorkspaceTab('console')
-    
-    try {
-      const res = await apiPost(`/api/submissions/${activeVersionSub.id}/execute`)
-      setRunResult(res)
-      toast.success('Execution completed successfully!')
-    } catch (err: any) {
-      console.error('Error executing code:', err)
-      toast.error(err.message || 'Execution failed')
-    } finally {
-      setRunningCode(false)
-    }
-  }
 
   // Grade Form Validation and Submission
   const handleSaveGrade = async (finalize: boolean) => {
@@ -467,6 +443,61 @@ export const Submissions: React.FC = () => {
       toast.error(err.message || 'Failed to save grade.')
     } finally {
       setIsSubmittingGrade(false)
+    }
+  }
+
+  // Approve or Reject Late Submission
+  const handleReviewLateSubmission = async (status: 'approved' | 'rejected') => {
+    if (!activeVersionSub) return
+    setIsReviewingLate(true)
+    try {
+      const response = await apiPost(`/api/submissions/${activeVersionSub.id}/review-late`, {
+        status,
+        comment: lateComment.trim()
+      })
+
+      toast.success(status === 'approved' ? 'Late submission approved!' : 'Late submission rejected.')
+      
+      // Clear review comment state
+      setLateComment('')
+
+      // Reload submissions list to sync lists
+      await loadInitialData(false)
+
+      // Re-trigger details query for the active version to update details
+      const { data: updatedVersion, error } = await supabase
+        .from('code_submissions')
+        .select('*, experiments(*), student:profiles!code_submissions_student_id_fkey(*), evaluations(*), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name)')
+        .eq('id', activeVersionSub.id)
+        .single()
+
+      if (!error && updatedVersion) {
+        const formatted = {
+          ...updatedVersion,
+          experiments: Array.isArray(updatedVersion.experiments) ? updatedVersion.experiments[0] : updatedVersion.experiments,
+          student: Array.isArray(updatedVersion.student) ? updatedVersion.student[0] : updatedVersion.student,
+          evaluations: updatedVersion.evaluations || null
+        } as Submission
+        setActiveVersionSub(formatted)
+        
+        // Also update selectedSub to sync with submission history changes
+        setSelectedSub(prev => {
+          if (!prev) return null
+          return {
+            ...prev,
+            late_status: formatted.late_status,
+            late_reason: formatted.late_reason,
+            late_reviewed_at: formatted.late_reviewed_at,
+            late_teacher_comment: formatted.late_teacher_comment,
+            reviewer: formatted.reviewer
+          }
+        })
+      }
+    } catch (err: any) {
+      console.error('Error reviewing late submission:', err)
+      toast.error(err.message || 'Failed to submit review.')
+    } finally {
+      setIsReviewingLate(false)
     }
   }
 
@@ -708,14 +739,39 @@ export const Submissions: React.FC = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="font-medium text-[#111827]">{submittedAtFormatted}</div>
                             {sub.is_late && (
-                              <span className="inline-block text-[9px] font-extrabold text-rose-500 bg-rose-50 border border-rose-100 px-1 py-0.2 rounded mt-0.5">
-                                LATE
-                              </span>
+                              <div className="flex flex-col items-start gap-0.5 mt-0.5">
+                                <span className="inline-block text-[8px] font-extrabold text-rose-500 bg-rose-50 border border-rose-100 px-1 py-0.2 rounded">
+                                  LATE
+                                </span>
+                                {sub.late_status === 'pending' && (
+                                  <span className="inline-block text-[8px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-1 py-0.2 rounded">
+                                    PENDING APPROVAL
+                                  </span>
+                                )}
+                                {sub.late_status === 'approved' && (
+                                  <span className="inline-block text-[8px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1 py-0.2 rounded">
+                                    APPROVED
+                                  </span>
+                                )}
+                                {sub.late_status === 'rejected' && (
+                                  <span className="inline-block text-[8px] font-bold text-rose-600 bg-rose-50 border border-rose-150 px-1 py-0.2 rounded">
+                                    REJECTED
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </td>
 
                           <td className="px-4 py-3 whitespace-nowrap">
-                            {!evalData ? (
+                            {sub.is_late && sub.late_status === 'rejected' ? (
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 border border-rose-100">
+                                Rejected
+                              </span>
+                            ) : sub.is_late && sub.late_status === 'pending' ? (
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-100">
+                                Pending Review
+                              </span>
+                            ) : !evalData ? (
                               <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#FEF3C7] text-[#D97706] border border-[#FEF3C7]">
                                 Pending
                               </span>
@@ -843,61 +899,12 @@ export const Submissions: React.FC = () => {
 
               {/* Right Column: Code viewer & Console Tabs */}
               <div className="md:col-span-3 space-y-4">
-                {/* Tabs selection */}
-                <div className="flex justify-between items-center bg-[#F8FAFC] border border-[#E5E7EB] rounded-xl p-1">
-                  <div className="flex gap-1.5 flex-1">
-                    <button
-                      onClick={() => setActiveWorkspaceTab('code')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
-                        activeWorkspaceTab === 'code'
-                          ? 'bg-white text-[#4F46E5] shadow-xs'
-                          : 'text-[#6B7280] hover:text-[#111827]'
-                      }`}
-                    >
-                      <Code2 className="w-3.5 h-3.5" />
-                      <span>Source Code</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setActiveWorkspaceTab('console')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
-                        activeWorkspaceTab === 'console'
-                          ? 'bg-white text-[#4F46E5] shadow-xs'
-                          : 'text-[#6B7280] hover:text-[#111827]'
-                      }`}
-                    >
-                      <Terminal className="w-3.5 h-3.5" />
-                      <span>Console & Results</span>
-                    </button>
-                  </div>
 
-                  {/* Execute Code trigger button */}
-                  {['Python', 'JavaScript', 'TypeScript', 'C', 'C++', 'Java'].includes(activeVersionSub?.language || '') && (
-                    <button
-                      onClick={handleExecuteCode}
-                      disabled={runningCode}
-                      className="ml-3 shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-300 rounded-lg text-[10px] font-bold uppercase transition cursor-pointer shadow-sm disabled:cursor-not-allowed"
-                    >
-                      {runningCode ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Running...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3 h-3 text-[#10B981] fill-[#10B981]" />
-                          <span>Run Code</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
 
                 {/* Tab content workspace */}
                 <div className="bg-slate-950 border border-slate-900 rounded-2xl min-h-[300px] overflow-hidden flex flex-col relative">
                   
                   {/* Tab 1: Source Code Viewer */}
-                  {activeWorkspaceTab === 'code' && (
                     <div className="flex-1 flex flex-col p-4">
                       {codeLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-500 text-xs">
@@ -1002,185 +1009,204 @@ export const Submissions: React.FC = () => {
                         )
                       })()}
                     </div>
-                  )}
-
-                  {/* Tab 2: Code Execution Console */}
-                  {activeWorkspaceTab === 'console' && (
-                    <div className="flex-1 flex flex-col p-4 text-xs font-mono text-slate-300">
-                      {!runResult && !runningCode ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-500 text-center space-y-3">
-                          <Terminal className="w-12 h-12 text-slate-800" />
-                          <div>
-                            <p className="font-semibold text-slate-400 text-xs">Interactive Code Runner</p>
-                            <p className="text-[10px] text-slate-600 max-w-xs mt-1">
-                              Press "Run Code" in the top bar to run compilation diagnostics and execution checks.
-                            </p>
-                          </div>
-                        </div>
-                      ) : runningCode ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-500 space-y-2">
-                          <Loader2 className="w-8 h-8 animate-spin text-[#10B981]" />
-                          <span className="text-[10px] animate-pulse">Running diagnostics sandboxing...</span>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Terminal stdout output logs */}
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Standard Output & Logs:</span>
-                            <pre className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 overflow-x-auto text-emerald-400 max-h-48 whitespace-pre-wrap leading-relaxed">
-                              {runResult.stdout}
-                            </pre>
-                          </div>
-
-                          {/* Execution speed metrics */}
-                          {runResult.metrics && (
-                            <div className="grid grid-cols-2 gap-3 bg-slate-900/60 border border-slate-800/40 p-3 rounded-xl">
-                              <div>
-                                <span className="text-[9px] text-slate-500 font-semibold block uppercase">Execution Speed:</span>
-                                <span className="font-bold text-white text-xs">{runResult.metrics.executionTimeMs} ms</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-slate-500 font-semibold block uppercase">Memory Footprint:</span>
-                                <span className="font-bold text-white text-xs">{runResult.metrics.memoryUsedMb} MB</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Test Cases Results List */}
-                          <div className="space-y-2">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Test Cases:</span>
-                            <div className="space-y-1.5">
-                              {runResult.testCases.map((tc, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-start gap-2.5 bg-slate-900/40 border border-slate-800 p-2.5 rounded-xl text-xs"
-                                >
-                                  {tc.status === 'passed' ? (
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                  ) : (
-                                    <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                                  )}
-                                  
-                                  <div className="flex-1">
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-semibold text-white">{tc.name}</span>
-                                      {tc.duration && (
-                                        <span className="text-[9px] text-slate-500 font-bold font-mono">{tc.duration}</span>
-                                      )}
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">{tc.message}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                 </div>
               </div>
             </div>
 
             {/* Assessment & Grading Section */}
-            <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-2xl p-4 md:p-6 space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#E5E7EB] pb-3">
-                <Award className="w-5 h-5 text-[#4F46E5]" />
-                <h4 className="font-bold text-[#111827] text-sm">Grading Assessment</h4>
+            {activeVersionSub?.is_late && activeVersionSub.late_status === 'pending' ? (
+              /* Render Late Submission Approval Card */
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 md:p-6 space-y-4 animate-fadeIn">
+                <div className="flex items-center gap-2 border-b border-amber-500/10 pb-3">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                  <h4 className="font-bold text-[#111827] text-sm">Late Submission Review</h4>
+                  <span className="ml-auto inline-flex px-2 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded">
+                    PENDING APPROVAL
+                  </span>
+                </div>
                 
-                {/* Grading form status tag */}
-                <span className="ml-auto">
-                  {(() => {
-                    const evalData = Array.isArray(activeVersionSub?.evaluations) 
-                      ? activeVersionSub?.evaluations[0] 
-                      : activeVersionSub?.evaluations
-                    
-                    if (!evalData) {
-                      return (
-                        <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-[#D97706] bg-[#FEF3C7] border border-[#FEF3C7] rounded">
-                          PENDING
-                        </span>
-                      )
-                    }
-                    if (evalData.is_draft) {
-                      return (
-                        <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded">
-                          DRAFT SAVED
-                        </span>
-                      )
-                    }
-                    return (
-                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded">
-                        FINALIZED & PUBLISHED
-                      </span>
-                    )
-                  })()}
-                </span>
-              </div>
-
-              {/* Revision Status Notice */}
-              {(() => {
-                const evalData = Array.isArray(activeVersionSub?.evaluations) 
-                  ? activeVersionSub?.evaluations[0] 
-                  : activeVersionSub?.evaluations
-                
-                if (evalData && !evalData.is_draft) {
-                  return (
-                    <div className="bg-[#EEF2FF] border border-[#EEF2FF] p-3.5 rounded-xl flex items-start gap-2.5 text-xs text-[#4F46E5]">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold">Grade Finalized</p>
-                        <p className="mt-0.5 opacity-90 leading-relaxed">
-                          Marks are published to the student portal and locked. To change marks, click <strong>Request Marks Revision</strong> below to submit an adjustment request to the administrator.
-                        </p>
-                      </div>
-                    </div>
-                  )
-                }
-                return null
-              })()}
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                {/* Marks selection field */}
-                <div className="sm:col-span-1 space-y-2">
-                  <label className="block text-[#4B5563] text-xs font-bold uppercase tracking-wider" htmlFor="marks">
-                    Marks (out of 10)
-                  </label>
-                  <input
-                    type="number"
-                    id="marks"
-                    min="0"
-                    max="10"
-                    placeholder="0-10"
-                    value={marks}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? '' : Math.min(10, Math.max(0, Number(e.target.value)))
-                      setMarks(val)
-                    }}
-                    disabled={activeVersionSub?.evaluations ? !Array.isArray(activeVersionSub.evaluations) && !activeVersionSub.evaluations.is_draft : false}
-                    className="w-full px-3 py-2 bg-white border border-[#E5E7EB] disabled:bg-[#F3F4F6] disabled:text-[#9CA3AF] rounded-xl text-sm font-bold text-center text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition"
-                  />
+                <div className="text-xs space-y-2 text-[#4B5563]">
+                  <p className="font-semibold text-slate-700">Student's Late Reason:</p>
+                  <div className="bg-amber-50/50 border border-amber-200/50 p-3 rounded-xl italic">
+                    "{activeVersionSub.late_reason || 'No reason provided.'}"
+                  </div>
                 </div>
 
-                {/* Remarks feedback textarea */}
-                <div className="sm:col-span-3 space-y-2">
-                  <label className="block text-[#4B5563] text-xs font-bold uppercase tracking-wider" htmlFor="remarks">
-                    Detailed Feedback & Remarks
+                <div className="space-y-2">
+                  <label className="block text-[#4B5563] text-xs font-bold uppercase tracking-wider" htmlFor="lateComment">
+                    Teacher Review Comment
                   </label>
                   <textarea
-                    id="remarks"
+                    id="lateComment"
                     rows={3}
-                    placeholder="Enter code critique, logic suggestions, formatting reviews..."
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Provide review notes explaining your approval/rejection decision..."
+                    value={lateComment}
+                    onChange={(e) => setLateComment(e.target.value)}
                     className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition resize-none"
                   />
                 </div>
-              </div>
 
-              {/* Assessment Actions footer */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5E7EB]">
+                <div className="flex justify-end gap-3 pt-3 border-t border-[#E5E7EB]">
+                  <button
+                    type="button"
+                    onClick={() => handleReviewLateSubmission('rejected')}
+                    disabled={isReviewingLate}
+                    className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-xs font-bold text-rose-600 rounded-lg transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isReviewingLate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                    <span>Reject Submission</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleReviewLateSubmission('approved')}
+                    disabled={isReviewingLate}
+                    className="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-xs font-bold text-white rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                  >
+                    {isReviewingLate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>Approve Submission</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Render standard grading / evaluation section */
+              <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-2xl p-4 md:p-6 space-y-4 animate-fadeIn">
+                
+                {/* Approval Status Banner (If late & approved/rejected) */}
+                {activeVersionSub?.is_late && activeVersionSub.late_status === 'approved' && (
+                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                    <div>
+                      <p className="font-bold">Late Submission Approved</p>
+                      <p className="mt-0.5 opacity-90 leading-relaxed">
+                        This late submission was approved by {activeVersionSub.reviewer ? (Array.isArray(activeVersionSub.reviewer) ? activeVersionSub.reviewer[0]?.full_name : (activeVersionSub.reviewer as any).full_name) : 'the instructor'} on {activeVersionSub.late_reviewed_at ? new Date(activeVersionSub.late_reviewed_at).toLocaleString() : 'N/A'}.
+                      </p>
+                      {activeVersionSub.late_teacher_comment && (
+                        <p className="mt-1 font-semibold italic text-emerald-700">Comment: "{activeVersionSub.late_teacher_comment}"</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeVersionSub?.is_late && activeVersionSub.late_status === 'rejected' && (
+                  <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+                    <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                    <div>
+                      <p className="font-bold">Late Submission Rejected</p>
+                      <p className="mt-0.5 opacity-90 leading-relaxed">
+                        This late submission was rejected by {activeVersionSub.reviewer ? (Array.isArray(activeVersionSub.reviewer) ? activeVersionSub.reviewer[0]?.full_name : (activeVersionSub.reviewer as any).full_name) : 'the instructor'} on {activeVersionSub.late_reviewed_at ? new Date(activeVersionSub.late_reviewed_at).toLocaleString() : 'N/A'}.
+                      </p>
+                      {activeVersionSub.late_teacher_comment && (
+                        <p className="mt-1 font-semibold italic text-rose-700">Reason: "{activeVersionSub.late_teacher_comment}"</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Grading Controls (Hide if rejected) */}
+                {activeVersionSub?.late_status === 'rejected' ? (
+                  <div className="text-center py-6 text-[#9CA3AF] text-xs font-bold">
+                    This late submission was rejected. Grading is disabled.
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 border-b border-[#E5E7EB] pb-3">
+                      <Award className="w-5 h-5 text-[#4F46E5]" />
+                      <h4 className="font-bold text-[#111827] text-sm">Grading Assessment</h4>
+                      
+                      {/* Grading form status tag */}
+                      <span className="ml-auto">
+                        {(() => {
+                          const evalData = Array.isArray(activeVersionSub?.evaluations) 
+                            ? activeVersionSub?.evaluations[0] 
+                            : activeVersionSub?.evaluations
+                          
+                          if (!evalData) {
+                            return (
+                              <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-[#D97706] bg-[#FEF3C7] border border-[#FEF3C7] rounded">
+                                PENDING
+                              </span>
+                            )
+                          }
+                          if (evalData.is_draft) {
+                            return (
+                              <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded">
+                                DRAFT SAVED
+                              </span>
+                            )
+                          }
+                          return (
+                            <span className="inline-flex px-2 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded">
+                              FINALIZED & PUBLISHED
+                            </span>
+                          )
+                        })()}
+                      </span>
+                    </div>
+
+                    {/* Revision Status Notice */}
+                    {(() => {
+                      const evalData = Array.isArray(activeVersionSub?.evaluations) 
+                        ? activeVersionSub?.evaluations[0] 
+                        : activeVersionSub?.evaluations
+                      
+                      if (evalData && !evalData.is_draft) {
+                        return (
+                          <div className="bg-[#EEF2FF] border border-[#EEF2FF] p-3.5 rounded-xl flex items-start gap-2.5 text-xs text-[#4F46E5]">
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-bold">Grade Finalized</p>
+                              <p className="mt-0.5 opacity-90 leading-relaxed">
+                                Marks are published to the student portal and locked. To change marks, click <strong>Request Marks Revision</strong> below to submit an adjustment request to the administrator.
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      {/* Marks selection field */}
+                      <div className="sm:col-span-1 space-y-2">
+                        <label className="block text-[#4B5563] text-xs font-bold uppercase tracking-wider" htmlFor="marks">
+                          Marks (out of 10)
+                        </label>
+                        <input
+                          type="number"
+                          id="marks"
+                          min="0"
+                          max="10"
+                          placeholder="0-10"
+                          value={marks}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Math.min(10, Math.max(0, Number(e.target.value)))
+                            setMarks(val)
+                          }}
+                          disabled={activeVersionSub?.evaluations ? !Array.isArray(activeVersionSub.evaluations) && !activeVersionSub.evaluations.is_draft : false}
+                          className="w-full px-3 py-2 bg-white border border-[#E5E7EB] disabled:bg-[#F3F4F6] disabled:text-[#9CA3AF] rounded-xl text-sm font-bold text-center text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition"
+                        />
+                      </div>
+
+                      {/* Remarks feedback textarea */}
+                      <div className="sm:col-span-3 space-y-2">
+                        <label className="block text-[#4B5563] text-xs font-bold uppercase tracking-wider" htmlFor="remarks">
+                          Detailed Feedback & Remarks
+                        </label>
+                        <textarea
+                          id="remarks"
+                          rows={3}
+                          placeholder="Enter code critique, logic suggestions, formatting reviews..."
+                          value={remarks}
+                          onChange={(e) => setRemarks(e.target.value)}
+                          className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Assessment Actions footer */}
+                    <div className="flex justify-end gap-3 pt-3 border-t border-[#E5E7EB]">
                 {(() => {
                   const evalData = Array.isArray(activeVersionSub?.evaluations) 
                     ? activeVersionSub?.evaluations[0] 
@@ -1246,29 +1272,27 @@ export const Submissions: React.FC = () => {
                   )
                 })()}
               </div>
-            </div>
-
-          </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
         ) : (
           /* Workspace Blank State */
           <div className="lg:col-span-7 bg-white border border-[#E5E7EB] rounded-2xl p-16 text-center shadow-sm flex flex-col items-center justify-center min-h-[400px]">
             <Code2 className="w-16 h-16 text-[#E5E7EB] mb-4" />
             <h3 className="text-base font-bold text-[#111827] mb-1">Assessment Workspace</h3>
             <p className="text-xs text-[#6B7280] max-w-sm leading-relaxed mb-6">
-              Select a student submission from the directory list on the left to start code review, launch diagnostic execution results, and grade lab assignments.
+              Select a student submission from the directory list on the left to start code review and grade lab assignments.
             </p>
             
             {/* Quick Tips */}
-            <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl max-w-md w-full grid grid-cols-3 gap-4 text-xs font-medium text-[#6B7280] text-left">
+            <div className="bg-[#F8FAFC] border border-[#E5E7EB] p-4 rounded-2xl max-w-md w-full grid grid-cols-2 gap-4 text-xs font-medium text-[#6B7280] text-left">
               <div className="space-y-1">
                 <span className="text-[#4F46E5] font-bold block uppercase tracking-wider text-[9px]">Syntax Highlighter</span>
                 <p className="text-[10px] leading-relaxed">Inline editor supports 6 languages with line numbers.</p>
               </div>
-              <div className="space-y-1 border-x border-[#E5E7EB] px-3">
-                <span className="text-[#10B981] font-bold block uppercase tracking-wider text-[9px]">Diagnostic Run</span>
-                <p className="text-[10px] leading-relaxed">Run code inside mock compiler container check.</p>
-              </div>
-              <div className="space-y-1">
+              <div className="space-y-1 border-l border-[#E5E7EB] pl-3">
                 <span className="text-amber-500 font-bold block uppercase tracking-wider text-[9px]">Draft Grades</span>
                 <p className="text-[10px] leading-relaxed">Save drafts safely before publishing finalized marks.</p>
               </div>

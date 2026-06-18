@@ -1,5 +1,8 @@
 import { supabaseAdmin } from '../config/supabase.js'
 import { uploadFile } from '../services/supabaseStorage.js'
+import { logAudit } from '../services/audit.js'
+import { createNotification } from '../services/notification.js'
+
 
 /**
  * submitCode(req, res, next)
@@ -19,7 +22,7 @@ import { uploadFile } from '../services/supabaseStorage.js'
 export const submitCode = async (req, res, next) => {
   try {
     const studentId = req.user.id
-    const { experiment_id } = req.body
+    const { experiment_id, late_reason } = req.body
 
     // Ensure a file is uploaded
     if (!req.file) {
@@ -71,6 +74,15 @@ export const submitCode = async (req, res, next) => {
     const deadline = new Date(assignment.experiments.deadline)
     const is_late = now > deadline
 
+    // Validate late reason if late
+    if (is_late) {
+      if (!late_reason || late_reason.trim().length < 5) {
+        return res.status(400).json({
+          error: 'Late submission requires a detailed reason (at least 5 characters).'
+        })
+      }
+    }
+
     // Upload file to Supabase Storage
     const timestamp = Date.now()
     const storagePath = `submissions/${studentId}/${experiment_id}/${timestamp}_${filename}`
@@ -107,7 +119,9 @@ export const submitCode = async (req, res, next) => {
         file_url: fileUrl,
         language,
         is_late,
-        version: nextVersion
+        version: nextVersion,
+        late_reason: is_late ? late_reason.trim() : null,
+        late_status: is_late ? 'pending' : null
       })
       .select()
       .single()
@@ -171,17 +185,17 @@ export const getMySubmissions = async (req, res, next) => {
     if (userRole === 'student') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments(title, subject), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
+        .select('*, experiments(title, subject), student:profiles!code_submissions_student_id_fkey(full_name), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
         .eq('student_id', userId)
     } else if (userRole === 'teacher') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments!inner(title, subject, created_by), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
+        .select('*, experiments!inner(title, subject, created_by), student:profiles!code_submissions_student_id_fkey(full_name), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
         .eq('experiments.created_by', userId)
     } else if (userRole === 'admin') {
       query = supabaseAdmin
         .from('code_submissions')
-        .select('*, experiments(title, subject), student:profiles(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
+        .select('*, experiments(title, subject), student:profiles!code_submissions_student_id_fkey(full_name), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name), evaluations(id, marks, max_marks, remarks, is_draft, evaluated_at)')
     } else {
       return res.status(403).json({ error: 'Forbidden: Invalid role' })
     }
@@ -224,7 +238,7 @@ export const getSubmissionById = async (req, res, next) => {
 
     const { data: submission, error: fetchError } = await supabaseAdmin
       .from('code_submissions')
-      .select('*, experiments(*), student:profiles(*), evaluations(*)')
+      .select('*, experiments(*), student:profiles!code_submissions_student_id_fkey(*), reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name), evaluations(*)')
       .eq('id', id)
       .single()
 
@@ -348,3 +362,86 @@ export const executeSubmission = async (req, res, next) => {
     next(error)
   }
 }
+
+/**
+ * reviewLateSubmission(req, res, next)
+ * - Teacher/Admin only
+ * - Params: id (submission ID)
+ * - Body: status ('approved' or 'rejected'), comment (optional text review comment)
+ * - Check if submission is late and currently pending
+ * - Update status, reviewer, timestamp, comment
+ * - Notify student
+ * - Log audit
+ * - Return updated submission
+ */
+export const reviewLateSubmission = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { status, comment } = req.body
+    const reviewerId = req.user.id
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid review status. Must be approved or rejected.' })
+    }
+
+    // Fetch submission with linked experiment title and student
+    const { data: submission, error: fetchError } = await supabaseAdmin
+      .from('code_submissions')
+      .select('*, experiments(title)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !submission) {
+      return res.status(404).json({ error: 'Code submission not found.' })
+    }
+
+    if (!submission.is_late) {
+      return res.status(400).json({ error: 'This submission is not late and does not require approval.' })
+    }
+
+    const { data: updatedSub, error: updateError } = await supabaseAdmin
+      .from('code_submissions')
+      .update({
+        late_status: status,
+        late_reviewed_by: reviewerId,
+        late_reviewed_at: new Date(),
+        late_teacher_comment: comment ? comment.trim() : null
+      })
+      .eq('id', id)
+      .select('*, experiments(title)')
+      .single()
+
+    if (updateError) {
+      return next(updateError)
+    }
+
+    // Send notification to student
+    const experimentTitle = updatedSub.experiments?.title || 'Experiment'
+    const statusUpper = status.toUpperCase()
+    const notificationMessage = `Your late submission for ${experimentTitle} has been ${statusUpper}. Comment: "${comment || 'No comment provided'}"`
+
+    await createNotification(
+      updatedSub.student_id,
+      `Late Submission ${statusUpper}`,
+      notificationMessage,
+      'late_submission_review'
+    ).catch(err => console.error('Failed to create review notification:', err))
+
+    // Log to audit logs
+    await logAudit(
+      reviewerId,
+      `late_submission_${status}`,
+      'code_submissions',
+      id,
+      { status, comment }
+    ).catch(err => console.error('Failed to log late submission review audit:', err))
+
+    return res.status(200).json({
+      message: `Late submission review completed: ${status}`,
+      submission: updatedSub
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+

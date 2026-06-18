@@ -11,5 +11,5 @@ export const createRevisionSchema = z.object({
 
 export const reviewRevisionSchema = z.object({
   status: z.enum(['approved', 'rejected'], { errorMap: () => ({ message: 'Status must be either approved or rejected' }) }),
-  admin_note: z.string().optional()
+  admin_note: z.string().nullable().optional()
 })

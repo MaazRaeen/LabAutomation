@@ -24,6 +24,7 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [submissions, setSubmissions] = useState<any[]>([])
   const [stats, setStats] = useState({
     total: 0,
     submitted: 0,
@@ -53,6 +54,26 @@ export const Dashboard: React.FC = () => {
           .eq('student_id', user.id)
 
         if (error) throw error
+
+        const { data: subsData, error: subsError } = await supabase
+          .from('code_submissions')
+          .select(`
+            id,
+            experiment_id,
+            is_late,
+            late_status,
+            late_reason,
+            late_reviewed_at,
+            late_teacher_comment,
+            submitted_at,
+            reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name)
+          `)
+          .eq('student_id', user.id)
+          .order('submitted_at', { ascending: false })
+
+        if (subsError) throw subsError
+
+        setSubmissions(subsData || [])
 
         if (data) {
           const formattedData = data.map((item: any) => ({
@@ -219,12 +240,50 @@ export const Dashboard: React.FC = () => {
                     late: 'bg-[#FEE2E2] text-[#EF4444] border-[#FEE2E2]',
                   }
 
-                  const displayStatus = assignment.status ? assignment.status.toUpperCase() : ''
+                  const experimentSubmissions = submissions.filter(s => s.experiment_id === assignment.experiments?.id)
+                  const latestSub = experimentSubmissions[0]
+
+                  let displayStatus = assignment.status ? assignment.status.toUpperCase() : ''
+                  let badgeStyle = statusStyles[assignment.status] || 'bg-slate-100 text-slate-500 border-slate-200'
+
+                  if (latestSub && latestSub.is_late) {
+                    if (latestSub.late_status === 'pending') {
+                      displayStatus = 'PENDING APPROVAL'
+                      badgeStyle = 'bg-amber-100 text-amber-800 border-amber-200'
+                    } else if (latestSub.late_status === 'approved') {
+                      displayStatus = 'LATE (APPROVED)'
+                      badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    } else if (latestSub.late_status === 'rejected') {
+                      displayStatus = 'LATE (REJECTED)'
+                      badgeStyle = 'bg-rose-100 text-rose-800 border-rose-200'
+                    }
+                  }
+
+                  const reviewerName = latestSub?.reviewer 
+                    ? (Array.isArray(latestSub.reviewer) ? latestSub.reviewer[0]?.full_name : latestSub.reviewer.full_name)
+                    : null
 
                   return (
                     <tr key={assignment.id} className="hover:bg-[#F8FAFC]/80 transition-colors">
                       <td className="px-6 py-4 font-bold text-[#111827]">
-                        {assignment.experiments?.title || 'Untitled Experiment'}
+                        <div>{assignment.experiments?.title || 'Untitled Experiment'}</div>
+                        {latestSub && latestSub.is_late && (
+                          <div className="mt-1.5 text-xs font-normal text-slate-500 space-y-1 bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl max-w-md">
+                            <div className="font-semibold text-slate-600">Late Reason: <span className="font-normal italic text-slate-500">"{latestSub.late_reason}"</span></div>
+                            {latestSub.late_status === 'approved' && (
+                              <div className="text-emerald-700 font-semibold flex items-center gap-1">
+                                <span>✓ Approved {reviewerName ? `by ${reviewerName}` : ''}</span>
+                                {latestSub.late_teacher_comment && <span className="font-normal text-slate-500 italic"> - "{latestSub.late_teacher_comment}"</span>}
+                              </div>
+                            )}
+                            {latestSub.late_status === 'rejected' && (
+                              <div className="text-rose-700 font-semibold flex items-center gap-1">
+                                <span>✗ Rejected {reviewerName ? `by ${reviewerName}` : ''}</span>
+                                {latestSub.late_teacher_comment && <span className="font-normal text-slate-500 italic"> - "{latestSub.late_teacher_comment}"</span>}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-[#6B7280] font-semibold">
                         {assignment.experiments?.subject || 'General'}
@@ -233,7 +292,7 @@ export const Dashboard: React.FC = () => {
                         {deadlineDate}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border ${statusStyles[assignment.status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border ${badgeStyle}`}>
                           {displayStatus}
                         </span>
                       </td>

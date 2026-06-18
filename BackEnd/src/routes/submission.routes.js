@@ -48,4 +48,13 @@ router.post(
   submissionController.executeSubmission
 )
 
+// POST /api/submissions/:id/review-late -> auth, allowRoles('teacher', 'admin'), reviewLateSubmission
+router.post(
+  '/:id/review-late',
+  auth,
+  allowRoles('teacher', 'admin'),
+  submissionController.reviewLateSubmission
+)
+
 export default router
+

@@ -27,6 +27,7 @@ export const Experiments: React.FC = () => {
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [submissions, setSubmissions] = useState<any[]>([])
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   const [selectedAssignmentStatus, setSelectedAssignmentStatus] = useState<string>('')
@@ -55,6 +56,26 @@ export const Experiments: React.FC = () => {
           .eq('student_id', user.id)
 
         if (error) throw error
+
+        const { data: subsData, error: subsError } = await supabase
+          .from('code_submissions')
+          .select(`
+            id,
+            experiment_id,
+            is_late,
+            late_status,
+            late_reason,
+            late_reviewed_at,
+            late_teacher_comment,
+            submitted_at,
+            reviewer:profiles!code_submissions_late_reviewed_by_fkey(full_name)
+          `)
+          .eq('student_id', user.id)
+          .order('submitted_at', { ascending: false })
+
+        if (subsError) throw subsError
+
+        setSubmissions(subsData || [])
 
         if (data) {
           const formattedData = data.map((item: any) => ({
@@ -146,6 +167,25 @@ export const Experiments: React.FC = () => {
               late: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
             }
 
+            const experimentSubmissions = submissions.filter(s => s.experiment_id === exp.id)
+            const latestSub = experimentSubmissions[0]
+
+            let displayStatus = assignment.status
+            let badgeStyle = statusStyles[assignment.status] || 'bg-slate-800 text-slate-400 border-slate-700'
+
+            if (latestSub && latestSub.is_late) {
+              if (latestSub.late_status === 'pending') {
+                displayStatus = 'pending approval'
+                badgeStyle = 'bg-amber-500/15 text-amber-350 border-amber-500/20'
+              } else if (latestSub.late_status === 'approved') {
+                displayStatus = 'late (approved)'
+                badgeStyle = 'bg-emerald-500/15 text-emerald-350 border-emerald-500/20'
+              } else if (latestSub.late_status === 'rejected') {
+                displayStatus = 'late (rejected)'
+                badgeStyle = 'bg-rose-500/15 text-rose-350 border-rose-500/20'
+              }
+            }
+
             return (
               <div
                 key={assignment.id}
@@ -160,8 +200,8 @@ export const Experiments: React.FC = () => {
                     <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded">
                       {exp.subject}
                     </span>
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded border uppercase ${statusStyles[assignment.status]}`}>
-                      {assignment.status}
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded border uppercase ${badgeStyle}`}>
+                      {displayStatus}
                     </span>
                   </div>
 

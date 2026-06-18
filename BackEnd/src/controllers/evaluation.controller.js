@@ -35,6 +35,13 @@ export const createEvaluation = async (req, res, next) => {
       })
     }
 
+    // Verify late submission status
+    if (submission.is_late && submission.late_status !== 'approved') {
+      return res.status(400).json({
+        error: 'Cannot grade a late submission that has not been approved.'
+      })
+    }
+
     // 2. Prevent duplicate evaluations
     const { data: existingEvaluation, error: evalError } = await supabaseAdmin
       .from('evaluations')

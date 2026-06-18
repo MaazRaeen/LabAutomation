@@ -34,6 +34,10 @@ export const SubmitCode: React.FC = () => {
   const [file, setFile] = useState<File | null>(null)
   const [language, setLanguage] = useState('')
   const [dragActive, setDragActive] = useState(false)
+  const [lateReason, setLateReason] = useState('')
+
+  const selectedAssignment = assignments.find(a => a.experiments?.id === experimentId)
+  const isOverdue = selectedAssignment ? (new Date() > new Date(selectedAssignment.experiments.deadline)) : false
 
   useEffect(() => {
     if (!user) return
@@ -149,12 +153,22 @@ export const SubmitCode: React.FC = () => {
       return
     }
 
+    if (isOverdue) {
+      if (!lateReason.trim() || lateReason.trim().length < 5) {
+        toast.error('Please provide a reason for late submission (minimum 5 characters).')
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       // Build multipart FormData — the backend handles storage upload + DB insert + audit
       const formData = new FormData()
       formData.append('code_file', file)
       formData.append('experiment_id', experimentId)
+      if (isOverdue) {
+        formData.append('late_reason', lateReason.trim())
+      }
 
       const result = await apiPostFormData('/api/submissions', formData)
 
@@ -267,13 +281,29 @@ export const SubmitCode: React.FC = () => {
             </div>
           )}
 
-          {/* Warning check for late submission */}
-          {experimentId && assignments.find(a => a.experiments?.id === experimentId)?.status === 'late' && (
-            <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex items-start gap-3 text-rose-400 text-xs">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Deadline Overdue</p>
-                <p className="mt-0.5 text-rose-400/80">This experiment's deadline has passed. Submitting now will mark your assignment status as LATE.</p>
+          {/* Warning check for late submission & textarea */}
+          {experimentId && isOverdue && (
+            <div className="space-y-4">
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex items-start gap-3 text-rose-400 text-xs">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Deadline Overdue</p>
+                  <p className="mt-0.5 text-rose-400/80">This experiment's deadline has passed. A mandatory reason is required to request approval for this late submission.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-slate-300 text-sm font-medium" htmlFor="lateReason">
+                  Reason for Late Submission <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  id="lateReason"
+                  rows={3}
+                  placeholder="Explain why you are submitting after the deadline (at least 5 characters)..."
+                  value={lateReason}
+                  onChange={(e) => setLateReason(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#0F172A] border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-white text-sm transition resize-none"
+                />
               </div>
             </div>
           )}
