@@ -19,7 +19,7 @@ export const createRevisionRequest = async (req, res, next) => {
     // 1. Fetch evaluation
     const { data: evaluation, error: evalError } = await supabaseAdmin
       .from('evaluations')
-      .select('*, submission:code_submissions(student_id, student:profiles(full_name), experiments(title))')
+      .select('*, submission:code_submissions(student_id, student:profiles!code_submissions_student_id_fkey(full_name), experiments(title))')
       .eq('id', evaluation_id)
       .single()
 
@@ -101,11 +101,11 @@ export const getRevisionRequests = async (req, res, next) => {
 
     if (userRole === 'teacher') {
       query = query
-        .select('*, evaluation:evaluations(*, submission:code_submissions(student:profiles(full_name, enrollment_no), experiments(title)))')
+        .select('*, evaluation:evaluations(*, submission:code_submissions(student:profiles!code_submissions_student_id_fkey(full_name, enrollment_no), experiments(title)))')
         .eq('teacher_id', userId)
     } else if (userRole === 'admin') {
       query = query
-        .select('*, teacher:profiles(full_name), evaluation:evaluations(*, submission:code_submissions(student:profiles(full_name, enrollment_no), experiments(title)))')
+        .select('*, teacher:profiles(full_name), evaluation:evaluations(*, submission:code_submissions(student:profiles!code_submissions_student_id_fkey(full_name, enrollment_no), experiments(title)))')
     } else {
       return res.status(403).json({ error: 'Forbidden: Invalid role' })
     }
@@ -148,7 +148,7 @@ export const reviewRevisionRequest = async (req, res, next) => {
     // 1. Fetch request with evaluation and linked student/experiment data
     const { data: request, error: fetchError } = await supabaseAdmin
       .from('marks_revision_requests')
-      .select('*, evaluation:evaluations(marks, teacher_id, submission:code_submissions(student_id, student:profiles(full_name), experiments(title)))')
+      .select('*, evaluation:evaluations(marks, teacher_id, submission:code_submissions(student_id, student:profiles!code_submissions_student_id_fkey(full_name), experiments(title)))')
       .eq('id', requestId)
       .single()
 

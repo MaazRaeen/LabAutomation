@@ -75,6 +75,16 @@ export async function apiPut(path: string, body?: any) {
   return handleResponse(response)
 }
 
+export async function apiPatch(path: string, body?: any) {
+  const headers = await getHeaders()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  return handleResponse(response)
+}
+
 export async function apiDelete(path: string) {
   const headers = await getHeaders()
   const response = await fetch(`${API_BASE_URL}${path}`, {

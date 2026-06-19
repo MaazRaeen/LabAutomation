@@ -255,12 +255,12 @@ export const getEvaluations = async (req, res, next) => {
     } else if (userRole === 'teacher') {
       query = supabaseAdmin
         .from('evaluations')
-        .select('*, submission:code_submissions!inner(*, student:profiles(full_name, enrollment_no), experiments(title, subject))')
+        .select('*, submission:code_submissions!inner(*, student:profiles!code_submissions_student_id_fkey(full_name, enrollment_no), experiments(title, subject))')
         .eq('teacher_id', userId)
     } else if (userRole === 'admin') {
       query = supabaseAdmin
         .from('evaluations')
-        .select('*, submission:code_submissions!inner(*, student:profiles(full_name, enrollment_no), experiments(title, subject)), teacher:profiles(full_name)')
+        .select('*, submission:code_submissions!inner(*, student:profiles!code_submissions_student_id_fkey(full_name, enrollment_no), experiments(title, subject)), teacher:profiles(full_name)')
     } else {
       return res.status(403).json({ error: 'Forbidden: Invalid role' })
     }
@@ -305,7 +305,7 @@ export const getEvaluationById = async (req, res, next) => {
     // Fetch single evaluation with relations
     const { data: evaluation, error: fetchError } = await supabaseAdmin
       .from('evaluations')
-      .select('*, submission:code_submissions(*, student:profiles(*), experiments(*)), teacher:profiles(*)')
+      .select('*, submission:code_submissions(*, student:profiles!code_submissions_student_id_fkey(*), experiments(*)), teacher:profiles(*)')
       .eq('id', id)
       .single()
 

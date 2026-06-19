@@ -10,6 +10,15 @@ export const getNotifications = async (req, res, next) => {
   try {
     const userId = req.user.id
 
+    // Fetch user's profile to get last_notification_viewed_at
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('last_notification_viewed_at')
+      .eq('id', userId)
+      .single()
+
+    if (profileError) return next(profileError)
+
     // Fetch up to 50 latest notifications
     const { data: notifications, error: fetchError } = await supabaseAdmin
       .from('notifications')
@@ -21,17 +30,49 @@ export const getNotifications = async (req, res, next) => {
     if (fetchError) return next(fetchError)
 
     // Fetch count of unread notifications
-    const { count: unreadCount, error: countError } = await supabaseAdmin
+    let countQuery = supabaseAdmin
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_read', false)
+
+    if (profile && profile.last_notification_viewed_at) {
+      countQuery = countQuery.gt('created_at', profile.last_notification_viewed_at)
+    }
+
+    const { count: unreadCount, error: countError } = await countQuery
 
     if (countError) return next(countError)
 
     return res.status(200).json({
       notifications: notifications || [],
       unread_count: unreadCount || 0
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * updateLastViewed(req, res, next)
+ * - Updates last_notification_viewed_at = now() for the logged-in user's profile
+ * - Returns success response with updated timestamp
+ */
+export const updateLastViewed = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .update({ last_notification_viewed_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) return next(error)
+
+    return res.status(200).json({
+      message: 'Notification viewed timestamp updated successfully',
+      last_notification_viewed_at: data.last_notification_viewed_at
     })
   } catch (error) {
     next(error)
@@ -77,3 +118,4 @@ export const markAsRead = async (req, res, next) => {
     next(error)
   }
 }
+

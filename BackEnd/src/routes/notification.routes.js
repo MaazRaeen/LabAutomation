@@ -7,6 +7,9 @@ const router = Router()
 // GET /api/notifications - Fetch user notifications
 router.get('/', auth, notificationController.getNotifications)
 
+// PATCH /api/notifications/viewed - Update last viewed timestamp
+router.patch('/viewed', auth, notificationController.updateLastViewed)
+
 // PATCH /api/notifications/read - Mark multiple notifications (or all if empty) as read
 router.patch('/read', auth, notificationController.markAsRead)
 
@@ -14,3 +17,4 @@ router.patch('/read', auth, notificationController.markAsRead)
 router.patch('/:id/read', auth, notificationController.markAsRead)
 
 export default router
+

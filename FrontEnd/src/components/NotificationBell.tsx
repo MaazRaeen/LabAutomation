@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
 import { Bell, CheckSquare, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { apiGet, apiPatch } from '../lib/api'
 
 interface Notification {
   id: string
@@ -19,35 +20,26 @@ export const NotificationBell: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [markingRead, setMarkingRead] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
+  
+  // Ref to store current isOpen state to avoid stale closure in realtime listener
+  const isOpenRef = useRef(isOpen)
+  useEffect(() => {
+    isOpenRef.current = isOpen
+  }, [isOpen])
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (showLoading = true) => {
     if (!user) return
-    setLoading(true)
+    if (showLoading) setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id, message, is_read, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (error) throw error
-
-      if (data) {
-        setNotifications(data)
-        // Recalculate unread count
-        const countRes = await supabase
-          .from('notifications')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('is_read', false)
-
-        setUnreadCount(countRes.count || 0)
+      const res = await apiGet('/api/notifications')
+      if (res) {
+        setNotifications(res.notifications || [])
+        setUnreadCount(res.unread_count || 0)
       }
     } catch (err: any) {
       console.error('Error fetching notifications:', err)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -67,8 +59,16 @@ export const NotificationBell: React.FC = () => {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          fetchNotifications()
+        async () => {
+          if (isOpenRef.current) {
+            // If panel is open, mark new notifications as viewed immediately in the background
+            try {
+              await apiPatch('/api/notifications/viewed')
+            } catch (err) {
+              console.error('Failed to update viewed status on new message:', err)
+            }
+          }
+          fetchNotifications(false)
         }
       )
       .subscribe()
@@ -88,20 +88,29 @@ export const NotificationBell: React.FC = () => {
     }
   }, [user])
 
+  const handleToggleOpen = async () => {
+    const nextOpen = !isOpen
+    setIsOpen(nextOpen)
+    if (nextOpen && user) {
+      // Instantly set unread count to 0 for responsive UI response
+      setUnreadCount(0)
+      try {
+        await apiPatch('/api/notifications/viewed')
+        fetchNotifications(false)
+      } catch (err) {
+        console.error('Error marking notifications as viewed:', err)
+      }
+    }
+  }
+
   const handleMarkAllAsRead = async () => {
-    if (!user || unreadCount === 0) return
+    if (!user) return
     setMarkingRead(true)
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false)
-
-      if (error) throw error
-
+      await apiPatch('/api/notifications/read', { notification_ids: [] })
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      setUnreadCount(0)
       toast.success('All notifications marked as read!')
-      fetchNotifications()
     } catch (err: any) {
       toast.error(err.message || 'Operation failed')
       console.error(err)
@@ -110,11 +119,24 @@ export const NotificationBell: React.FC = () => {
     }
   }
 
+  const handleMarkSingleRead = async (id: string, isRead: boolean) => {
+    if (isRead) return
+    try {
+      // Optimistic local state update
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      await apiPatch(`/api/notifications/${id}/read`)
+    } catch (err: any) {
+      console.error('Error marking notification as read:', err)
+      // Rollback on error
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n))
+    }
+  }
+
   return (
     <div className="relative" ref={bellRef}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         className="relative p-2 text-[#6B7280] hover:text-[#4F46E5] rounded-lg hover:bg-[#EEF2FF] transition cursor-pointer"
         aria-label="Notifications"
       >
@@ -132,7 +154,7 @@ export const NotificationBell: React.FC = () => {
           {/* Header */}
           <div className="px-4 py-3 border-b border-[#E5E7EB] flex items-center justify-between">
             <span className="text-xs font-bold text-[#111827] uppercase tracking-wider">Alerts & Notifications</span>
-            {unreadCount > 0 && (
+            {notifications.some(n => !n.is_read) && (
               <button
                 onClick={handleMarkAllAsRead}
                 disabled={markingRead}
@@ -168,9 +190,10 @@ export const NotificationBell: React.FC = () => {
                 return (
                   <div
                     key={n.id}
-                    className={`px-4 py-3 text-xs leading-normal transition ${
-                      n.is_read ? 'bg-transparent text-[#6B7280]' : 'bg-[#EEF2FF]/40 text-[#111827] font-semibold'
-                    }`}
+                    onClick={() => handleMarkSingleRead(n.id, n.is_read)}
+                    className={`px-4 py-3 text-xs leading-normal transition cursor-pointer select-none ${
+                      n.is_read ? 'bg-transparent text-[#6B7280]' : 'bg-[#EEF2FF]/40 text-[#111827] font-semibold hover:bg-[#EEF2FF]/20'
+                    } hover:bg-[#F3F4F6]`}
                   >
                     <p>{n.message}</p>
                     <div className="mt-1 flex items-center justify-between text-[9px] text-[#6B7280] font-semibold">
@@ -194,3 +217,4 @@ export const NotificationBell: React.FC = () => {
 }
 
 export default NotificationBell
+
